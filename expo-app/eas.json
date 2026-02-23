@@ -1,0 +1,26 @@
+{
+    "cli": {
+        "version": ">= 10.0.0"
+    },
+    "build": {
+        "development": {
+            "developmentClient": true,
+            "distribution": "internal"
+        },
+        "sidestore": {
+            "ios": {
+                "simulator": false,
+                "buildConfiguration": "Release",
+                "credentialsSource": "local"
+            },
+            "distribution": "internal",
+            "autoIncrement": true
+        },
+        "production": {
+            "autoIncrement": true
+        }
+    },
+    "submit": {
+        "production": {}
+    }
+}

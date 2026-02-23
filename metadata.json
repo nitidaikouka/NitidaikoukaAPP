@@ -1,0 +1,5 @@
+{
+  "name": "Remix: 日本大学工科記録アプリ",
+  "description": "React Web App replicating the Nihon University Kyudo Record App. Can be installed as a PWA.",
+  "requestFramePermissions": []
+}

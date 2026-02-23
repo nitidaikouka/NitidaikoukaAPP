@@ -1,0 +1,53 @@
+{
+    "expo": {
+        "name": "日本大学工科記録アプリ",
+        "slug": "nihon-u-kyudo-app",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/icon.png",
+        "scheme": "nihonukyudo",
+        "userInterfaceStyle": "light",
+        "splash": {
+            "image": "./assets/splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#ffffff"
+        },
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.nihondaigakukouka",
+            "googleServicesFile": "./GoogleService-Info.plist",
+            "infoPlist": {
+                "NSCameraUsageDescription": "カメラは使用しません",
+                "UIRequiresFullScreen": true
+            }
+        },
+        "android": {
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/adaptive-icon.png",
+                "backgroundColor": "#ffffff"
+            },
+            "package": "com.nihondaigakukouka.score",
+            "googleServicesFile": "./google-services.json"
+        },
+        "web": {
+            "bundler": "metro",
+            "output": "static",
+            "favicon": "./assets/favicon.png"
+        },
+        "plugins": [
+            "expo-router",
+            "@react-native-async-storage/async-storage"
+        ],
+        "experiments": {
+            "typedRoutes": true
+        },
+        "extra": {
+            "router": {
+                "origin": false
+            },
+            "eas": {
+                "projectId": "nihondaigakukoukascore"
+            }
+        }
+    }
+}
