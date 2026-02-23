@@ -25,7 +25,6 @@ jobs:
         working-directory: expo-app
         run: npm install
 
-      # EAS CLI を使わず、Expo の共通コマンドのみでプレビルドを実行
       - name: Prebuild iOS project
         working-directory: expo-app
         env:
@@ -43,9 +42,16 @@ jobs:
         working-directory: expo-app/ios
         run: |
           export NODE_BINARY=$(which node)
-          SCHEME=$(ls *.xcworkspace | sed 's/\.xcworkspace//')
           
-          xcodebuild -workspace *.xcworkspace \
+          # Workspaceファイルの特定
+          WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
+          echo "Target Workspace: $WORKSPACE"
+          
+          # スキーマ名の正確な特定 (xcodebuildから直接リストを取得)
+          SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" | grep -A 10 "Schemes:" | tail -n +2 | head -n 1 | xargs)
+          echo "Target Scheme: $SCHEME"
+          
+          xcodebuild -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
             -configuration Release \
             -sdk iphoneos \
@@ -56,6 +62,7 @@ jobs:
             archive
 
           mkdir -p Payload
+          # アプリケーションフォルダから .app ファイルを探してコピー
           APP_PATH=$(find build/App.xcarchive/Products/Applications -name "*.app" | head -n 1)
           cp -r "$APP_PATH" Payload/
           zip -r ../../NichikokaApp.ipa Payload
