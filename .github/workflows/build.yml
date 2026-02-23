@@ -28,7 +28,9 @@ jobs:
       # EAS CLI を使わず、Expo の共通コマンドのみでプレビルドを実行
       - name: Prebuild iOS project
         working-directory: expo-app
-        run: npx expo prebuild --platform ios --non-interactive
+        env:
+          CI: 1
+        run: npx expo prebuild --platform ios
 
       - name: Configure Xcode environment
         working-directory: expo-app/ios
