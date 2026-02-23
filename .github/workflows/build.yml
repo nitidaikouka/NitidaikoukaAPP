@@ -21,16 +21,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: expo-app/package-lock.json
 
-      - name: Setup Expo & EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
       - name: Install dependencies
         working-directory: expo-app
         run: npm install
 
+      # EAS CLI を使わず、Expo の共通コマンドのみでプレビルドを実行
       - name: Prebuild iOS project
         working-directory: expo-app
         run: npx expo prebuild --platform ios --non-interactive
@@ -39,19 +34,14 @@ jobs:
         working-directory: expo-app/ios
         run: |
           NODE_PATH=$(which node)
-          echo "Node version: $(node -v)"
-          echo "Node path: $NODE_PATH"
-          # Xcodeのビルドプロセスに正しいNodeパスを強制
           echo "export NODE_BINARY=$NODE_PATH" > .xcode.env
           echo "export NODE_BINARY=$NODE_PATH" > .xcode.env.local
-          cat .xcode.env
 
       - name: Build unsigned IPA
         working-directory: expo-app/ios
         run: |
           export NODE_BINARY=$(which node)
           SCHEME=$(ls *.xcworkspace | sed 's/\.xcworkspace//')
-          echo "Building scheme: $SCHEME with Node: $NODE_BINARY"
           
           xcodebuild -workspace *.xcworkspace \
             -scheme "$SCHEME" \
@@ -64,7 +54,6 @@ jobs:
             archive
 
           mkdir -p Payload
-          # .app ファイルのパスを確実に取得
           APP_PATH=$(find build/App.xcarchive/Products/Applications -name "*.app" | head -n 1)
           cp -r "$APP_PATH" Payload/
           zip -r ../../NichikokaApp.ipa Payload
