@@ -268,7 +268,7 @@ export default function RecordScreen() {
                                         const calculatorId = model.getCalculatorForArcher(archer.id);
                                         const mark = archer.marks[index] ?? Mark.none;
                                         const blockIndex = Math.floor(index / 4) * 4;
-                                        const isLocked = calculatorId && model.lockedBlocks[`${calculatorId}-${blockIndex}`];
+                                        const isLocked = !!(calculatorId && model.lockedBlocks[`${calculatorId}-${blockIndex}`]);
 
                                         return (
                                             <View key={archer.id} style={styles.archerCol}>

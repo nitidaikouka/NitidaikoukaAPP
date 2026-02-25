@@ -677,10 +677,6 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
         return null;
     };
 
-    const exportDataToString = () => {
-        return JSON.stringify(makeData());
-    };
-
     const exportDataToFile = async () => {
         try {
             const dataStr = exportDataToString();

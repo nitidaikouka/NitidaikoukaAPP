@@ -16,7 +16,7 @@ export default function HistoryScreen() {
     const [showTrash, setShowTrash] = useState(false);
     const [secretTapCount, setSecretTapCount] = useState(0);
 
-    const getFiscalYear = (date: string) => {
+    const getFiscalYear = (date: number | string) => {
         const d = new Date(date);
         const month = d.getMonth() + 1;
         return month >= 4 ? d.getFullYear() : d.getFullYear() - 1;
