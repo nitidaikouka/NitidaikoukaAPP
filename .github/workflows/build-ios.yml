@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: 🏗 Checkout
         uses: actions/checkout@v4
@@ -28,9 +28,11 @@ jobs:
         working-directory: expo-app
         run: npm install
 
-      - name: 🚀 Build IPA (Local Build on Runner)
+      - name: 🚀 Build IPA (Remote Build on Expo Cloud)
         working-directory: expo-app
-        run: eas build --platform ios --profile sidestore --local --non-interactive --output=./build.ipa
+        # `--local` を削除し、Expo サーバーでビルドを実行。
+        # `--output` を指定することで、ビルド完了後に自動的に IPA をダウンロードします。
+        run: eas build --platform ios --profile sidestore --non-interactive --output=./build.ipa
 
       - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
