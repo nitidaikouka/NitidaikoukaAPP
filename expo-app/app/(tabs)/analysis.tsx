@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, ScrollView, TouchableOpacity, SafeAreaView,
-    FlatList, StyleSheet, StatusBar
+    FlatList, StyleSheet, StatusBar, TextInput
 } from 'react-native';
 import { useScoreModel } from '../../src/ScoreContext';
 import { Gender, Mark } from '../../src/types';
@@ -153,4 +153,8 @@ const styles = StyleSheet.create({
     tableRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderColor: '#f3f4f6', backgroundColor: '#fff' },
     tableCell: { fontSize: 14, textAlign: 'center', color: '#1f2937' },
     genderBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
+    datePickerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, paddingHorizontal: 4 },
+    dateInputWrap: { flex: 1, gap: 4 },
+    dateInputLabel: { fontSize: 10, color: '#9ca3af', fontWeight: 'bold' },
+    dateInput: { backgroundColor: '#f3f4f6', height: 40, borderRadius: 8, paddingHorizontal: 10, fontSize: 14, fontWeight: '500' },
 });

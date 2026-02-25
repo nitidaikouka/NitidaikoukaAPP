@@ -134,6 +134,7 @@ export interface ScoreContextType {
 
     exportDataToString: () => string;
     importDataFromString: (json: string) => boolean;
+    resetCurrentSession: () => void;
 }
 
 export const ScoreContext = createContext<ScoreContextType | null>(null);
@@ -456,8 +457,17 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
 
         const newArchers = [createArcher(shotsPerRound), createArcher(shotsPerRound), createArcher(shotsPerRound)];
         setArchers(newArchers);
+        setLockedBlocks({});
 
-        syncToCloud(makeData({ currentArchers: newArchers, history: newHistory, sessions: newSessions }));
+        syncToCloud(makeData({ currentArchers: newArchers, history: newHistory, sessions: newSessions, lockedBlocks: {} }));
+    };
+
+    const resetCurrentSession = () => {
+        const newArchers = [createArcher(shotsPerRound), createArcher(shotsPerRound), createArcher(shotsPerRound)];
+        setArchers(newArchers);
+        setLockedBlocks({});
+        setUndoStack([]);
+        setRedoStack([]);
     };
 
     const addMember = (name: string, gender: Gender, grade: number) => {
@@ -602,8 +612,9 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const getDisplayName = (name: string) => {
-        const parts = name.split(' ');
-        return parts.length >= 2 ? parts[1] || parts[0] : name;
+        if (!name) return "";
+        const parts = name.split(/[\s　]+/);
+        return parts[0]; // 苗字のみを表示
     };
 
     const getGroupArchers = (calculatorId: string): Archer[] => {
@@ -684,6 +695,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
             updateSessionNote, updateSessionDate,
             getDisplayName, getGroupArchers, getHistoryGroupArchers,
             getCalculatorForArcher, exportDataToString, importDataFromString,
+            resetCurrentSession,
         }}>
             {children}
         </ScoreContext.Provider>
