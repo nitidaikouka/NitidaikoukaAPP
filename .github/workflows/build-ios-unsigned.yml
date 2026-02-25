@@ -32,9 +32,12 @@ jobs:
       - name: 🚀 Build Unsigned iOS App
         working-directory: expo-app/ios
         run: |
+          WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" | grep -A 10 "Schemes:" | tail -n +2 | head -n 1 | xargs)
+          echo "Building Workspace: $WORKSPACE, Scheme: $SCHEME"
           xcodebuild build \
-            -workspace nihonukyudoapp.xcworkspace \
-            -scheme nihonukyudoapp \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath derived_data \
@@ -44,7 +47,9 @@ jobs:
         working-directory: expo-app/ios
         run: |
           mkdir -p Payload
-          mv derived_data/Build/Products/Release-iphoneos/nihonukyudoapp.app Payload/
+          # Find the .app directory inside derived_data
+          APP_PATH=$(find derived_data/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          mv "$APP_PATH" Payload/
           zip -r app.ipa Payload
 
       - name: 📤 Upload Artifact
