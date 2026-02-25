@@ -103,6 +103,8 @@ export default function RecordScreen() {
 
     const syncColor = model.syncStatus === 'synced' ? '#22c55e' : model.syncStatus === 'pending' ? '#3b82f6' : '#ef4444';
 
+    const scrollRef = useRef<ScrollView>(null);
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" />
@@ -159,17 +161,18 @@ export default function RecordScreen() {
 
             {/* 記録グリッド - 縦横スクロールとスティッキーヘッダーの両立 */}
             <View style={{ flex: 1 }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: '100%', flexDirection: 'row-reverse' }}>
+                <ScrollView
+                    ref={scrollRef}
+                    horizontal
+                    showsHorizontalScrollIndicator={true}
+                    contentContainerStyle={{ minWidth: '100%', flexDirection: 'row' }}
+                    onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+                >
+                    <View style={{ flexGrow: 1 }} />
                     <View style={{ width: (model.archers.length + 1) * 52 }}>
                         <ScrollView style={{ flex: 1 }} stickyHeaderIndices={[0]} contentContainerStyle={{ paddingBottom: 100 }}>
                             {/* スティッキーヘッダー部分 */}
-                            <View style={[styles.stickyHeaderArea, { flexDirection: 'row-reverse' }]}>
-                                {/* 行番号のカラム頭 */}
-                                <View style={styles.rowHeaderCol}>
-                                    <View style={styles.headerCell} />
-                                    <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
-                                </View>
-
+                            <View style={[styles.stickyHeaderArea, { flexDirection: 'row' }]}>
                                 {model.archers.map((archer) => {
                                     if (archer.isSeparator) {
                                         return (
@@ -207,6 +210,12 @@ export default function RecordScreen() {
                                         </View>
                                     );
                                 })}
+
+                                {/* 行番号のカラム頭 */}
+                                <View style={styles.rowHeaderCol}>
+                                    <View style={styles.headerCell} />
+                                    <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
+                                </View>
                             </View>
 
                             {/* 各射の記録行 */}
@@ -215,14 +224,7 @@ export default function RecordScreen() {
                                 const isSep = index % 4 === 0 && index !== 0;
 
                                 return (
-                                    <View key={index} style={{ flexDirection: 'row-reverse', width: '100%' }}>
-                                        {/* 行番号カラム */}
-                                        <View style={styles.rowHeaderCol}>
-                                            <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
-                                                <Text style={styles.rowNumber}>{index + 1}</Text>
-                                            </View>
-                                        </View>
-
+                                    <View key={index} style={{ flexDirection: 'row', width: '100%' }}>
                                         {/* 各アーチャーのセル列 */}
                                         {model.archers.map((archer) => {
                                             if (archer.isSeparator) {
@@ -285,6 +287,13 @@ export default function RecordScreen() {
                                                 </View>
                                             );
                                         })}
+
+                                        {/* 行番号カラム */}
+                                        <View style={styles.rowHeaderCol}>
+                                            <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
+                                                <Text style={styles.rowNumber}>{index + 1}</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 );
                             })}
