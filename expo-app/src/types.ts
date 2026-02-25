@@ -46,13 +46,13 @@ export interface RecordEntry {
 
 export interface PracticeRecord {
     id: string;
-    date: string;
+    date: number;
     entries: RecordEntry[];
 }
 
 export interface SessionRecord {
     id: string;
-    date: string;
+    date: number;
     archers: Archer[];
     shotCount: number;
     note?: string;

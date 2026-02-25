@@ -159,10 +159,10 @@ export default function RecordScreen() {
 
             {/* 記録グリッド - 縦横スクロールとスティッキーヘッダーの両立 */}
             <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                <View style={{ flexDirection: 'row-reverse' }}>
+                <View style={{ flexDirection: 'row-reverse', minWidth: (model.archers.length + 1) * 52 }}>
                     <ScrollView style={{ flex: 1 }} stickyHeaderIndices={[0]} contentContainerStyle={{ paddingBottom: 100 }}>
                         {/* スティッキーヘッダー部分 */}
-                        <View style={styles.stickyHeaderArea}>
+                        <View style={[styles.stickyHeaderArea, { width: '100%' }]}>
                             {/* 行番号のカラム頭 */}
                             <View style={styles.rowHeaderCol}>
                                 <View style={styles.headerCell} />
@@ -214,7 +214,7 @@ export default function RecordScreen() {
                             const isSep = index % 4 === 0 && index !== 0;
 
                             return (
-                                <View key={index} style={{ flexDirection: 'row-reverse' }}>
+                                <View key={index} style={{ flexDirection: 'row-reverse', width: '100%' }}>
                                     {/* 行番号カラム */}
                                     <View style={styles.rowHeaderCol}>
                                         <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>

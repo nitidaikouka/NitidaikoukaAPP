@@ -111,7 +111,6 @@ export interface ScoreContextType {
     updateArcherInfo: (archerId: string, name: string, gender: Gender, grade: number, isGuest: boolean) => void;
     moveArcher: (sourceId: string, targetId: string) => void;
     saveSessionAndReset: (note: string) => void;
-    exportDataToString: () => string;
     exportDataToFile: () => Promise<void>;
     importDataFromPicker: () => Promise<boolean>;
     importDataFromCode: (json: string) => boolean;
@@ -133,7 +132,7 @@ export interface ScoreContextType {
     updateHistoryArcherInfo: (sessionId: string, archerId: string, name: string, gender: Gender, grade: number, isGuest: boolean) => void;
     moveHistoryArcher: (sessionId: string, sourceId: string, targetId: string) => void;
     updateSessionNote: (sessionId: string, note: string) => void;
-    updateSessionDate: (sessionId: string, date: string) => void;
+    updateSessionDate: (sessionId: string, date: number) => void;
 
     getDisplayName: (name: string) => string;
     getGroupArchers: (calculatorId: string) => Archer[];
@@ -173,7 +172,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
     const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
     const activeSyncs = useRef(0);
 
-    const getFiscalYear = (date: Date | string) => {
+    const getFiscalYear = (date: number | string | Date) => {
         const d = new Date(date);
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
@@ -436,6 +435,10 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
         ...overrides
     });
 
+    const exportDataToString = () => {
+        return JSON.stringify(makeData());
+    };
+
     const saveSessionAndReset = (note: string) => {
         const entries = archers
             .filter(a => !a.isSeparator && !a.isTotalCalculator && a.name && a.marks.some(m => m !== Mark.none))
@@ -448,7 +451,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
 
         let newHistory = history;
         if (entries.length > 0) {
-            newHistory = [...history, { id: Math.random().toString(36).slice(2), date: new Date().toISOString(), entries }];
+            newHistory = [...history, { id: Math.random().toString(36).slice(2), date: Date.now(), entries }];
             setHistory(newHistory);
         }
 
@@ -456,7 +459,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
         if (archers.length > 0) {
             newSessions = [{
                 id: Math.random().toString(36).slice(2),
-                date: new Date().toISOString(),
+                date: Date.now(),
                 archers, shotCount: shotsPerRound, note,
                 syncStatus: 'pending'
             }, ...sessions];
@@ -497,6 +500,19 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
 
     const deleteMember = (id: string) => setMembers(prev => prev.filter(m => m.id !== id));
     const deleteAlumni = (id: string) => setAlumni(prev => prev.filter(a => a.id !== id));
+
+    const startNewSession = (shotCount: number) => {
+        const newSession: SessionRecord = {
+            id: Date.now().toString(),
+            date: Date.now(),
+            archers: archers.map(a => ({ ...a, marks: Array(shotCount).fill(Mark.none) })),
+            shotCount
+        };
+        const newSessions = [newSession, ...sessions];
+        setSessions(newSessions);
+        setShotsPerRound(shotCount);
+        syncToCloud(makeData({ sessions: newSessions, shotsPerRound: shotCount }));
+    };
 
     const deleteSession = (id: string) => {
         const sessionToDelete = sessions.find(s => s.id === id);
@@ -615,7 +631,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
         syncToCloud(makeData({ sessions: newSessions }));
     };
 
-    const updateSessionDate = (sessionId: string, date: string) => {
+    const updateSessionDate = (sessionId: string, date: number) => {
         const newSessions = sessions.map(s => s.id === sessionId ? { ...s, syncStatus: 'pending' as const, date } : s);
         setSessions(newSessions);
         syncToCloud(makeData({ sessions: newSessions }));
@@ -760,11 +776,10 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
             toggleHistoryMark, updateHistoryArcherInfo, moveHistoryArcher,
             updateSessionNote, updateSessionDate,
             getDisplayName, getGroupArchers, getHistoryGroupArchers,
-            getCalculatorForArcher, exportDataToString, exportDataToFile,
-            importDataFromPicker, importDataFromCode,
-            resetCurrentSession,
+            getCalculatorForArcher, resetCurrentSession,
+            exportDataToString, exportDataToFile, importDataFromPicker, importDataFromCode, importDataFromString
         }}>
             {children}
-        </ScoreContext.Provider>
+        </ScoreContext.Provider >
     );
 };

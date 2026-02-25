@@ -1,0 +1,39 @@
+name: Build iOS IPA (SideStore)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: 🏗 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: expo-app/package-lock.json
+
+      - name: 🏗 Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          working-directory: expo-app
+
+      - name: 📦 Install dependencies
+        working-directory: expo-app
+        run: npm install
+
+      - name: 🚀 Build IPA (Local Build on Runner)
+        working-directory: expo-app
+        run: eas build --platform ios --profile sidestore --local --non-interactive --output=./build.ipa
+
+      - name: 📤 Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: expo-app/build.ipa

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
     View, Text, ScrollView, TouchableOpacity, TextInput,
-    Modal, Alert, StyleSheet, SafeAreaView, FlatList, StatusBar
+    Modal, Alert, StyleSheet, SafeAreaView, FlatList, StatusBar,
+    KeyboardAvoidingView, Platform
 } from 'react-native';
 import { useScoreModel } from '../../src/ScoreContext';
 import { Gender } from '../../src/types';
@@ -109,54 +110,60 @@ export default function SettingsScreen() {
 
             {/* 部員追加モーダル */}
             <Modal visible={showAddMember} transparent animationType="slide" onRequestClose={() => setShowAddMember(false)}>
-                <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowAddMember(false)}>
-                    <View style={styles.menuCard} onStartShouldSetResponder={() => true}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{editingId ? '部員情報を編集' : '部員を追加'}</Text>
-                            <TouchableOpacity onPress={() => setShowAddMember(false)}><X size={24} color="#374151" /></TouchableOpacity>
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>氏名</Text>
-                            <TextInput style={styles.textInput} value={newName} onChangeText={setNewName} placeholder="例: 日本 太郎" autoFocus />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>性別</Text>
-                            <View style={styles.toggleRow}>
-                                {([Gender.male, Gender.female] as const).map(g => (
-                                    <TouchableOpacity
-                                        key={g}
-                                        style={[styles.toggleBtn, newGender === g && styles.toggleBtnActive]}
-                                        onPress={() => setNewGender(g)}
-                                    >
-                                        <Text style={[styles.toggleText, newGender === g && styles.toggleTextActive]}>{g}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                <View style={styles.overlay}>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={{ width: '100%', justifyContent: 'flex-end' }}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                    >
+                        <TouchableOpacity activeOpacity={1} onPress={() => { }} style={styles.menuCard}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>{editingId ? '部員情報を編集' : '部員を追加'}</Text>
+                                <TouchableOpacity onPress={() => setShowAddMember(false)}><X size={24} color="#374151" /></TouchableOpacity>
                             </View>
-                        </View>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>学年</Text>
-                            <View style={styles.toggleRow}>
-                                {[1, 2, 3, 4].map(g => (
-                                    <TouchableOpacity
-                                        key={g}
-                                        style={[styles.toggleBtn, newGrade === g && styles.toggleBtnActive]}
-                                        onPress={() => setNewGrade(g)}
-                                    >
-                                        <Text style={[styles.toggleText, newGrade === g && styles.toggleTextActive]}>{g}年</Text>
-                                    </TouchableOpacity>
-                                ))}
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>氏名</Text>
+                                <TextInput style={styles.textInput} value={newName} onChangeText={setNewName} placeholder="例: 日本 太郎" autoFocus />
                             </View>
-                        </View>
 
-                        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                            <Check size={20} color="#fff" />
-                            <Text style={styles.saveBtnText}>保存する</Text>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>性別</Text>
+                                <View style={styles.toggleRow}>
+                                    {([Gender.male, Gender.female] as const).map(g => (
+                                        <TouchableOpacity
+                                            key={g}
+                                            style={[styles.toggleBtn, newGender === g && styles.toggleBtnActive]}
+                                            onPress={() => setNewGender(g)}
+                                        >
+                                            <Text style={[styles.toggleText, newGender === g && styles.toggleTextActive]}>{g}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>学年</Text>
+                                <View style={styles.toggleRow}>
+                                    {[1, 2, 3, 4].map(g => (
+                                        <TouchableOpacity
+                                            key={g}
+                                            style={[styles.toggleBtn, newGrade === g && styles.toggleBtnActive]}
+                                            onPress={() => setNewGrade(g)}
+                                        >
+                                            <Text style={[styles.toggleText, newGrade === g && styles.toggleTextActive]}>{g}年</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+
+                            <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+                                <Check size={20} color="#fff" />
+                                <Text style={styles.saveBtnText}>保存する</Text>
+                            </TouchableOpacity>
                         </TouchableOpacity>
-                    </View>
-                </TouchableOpacity>
+                    </KeyboardAvoidingView>
+                </View>
             </Modal>
 
         </SafeAreaView>

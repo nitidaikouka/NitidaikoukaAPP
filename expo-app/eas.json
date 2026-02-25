@@ -11,7 +11,7 @@
             "ios": {
                 "simulator": false,
                 "buildConfiguration": "Release",
-                "credentialsSource": "local"
+                "credentialsSource": "remote"
             },
             "distribution": "internal",
             "autoIncrement": true

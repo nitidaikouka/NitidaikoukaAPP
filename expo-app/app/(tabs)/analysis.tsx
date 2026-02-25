@@ -82,7 +82,7 @@ export default function AnalysisScreen() {
                     ))}
                 </View>
 
-                {selectedPeriod === '月ごと' && (
+                {selectedPeriod === '月別' && (
                     <View style={styles.monthNav}>
                         <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.navBtn}>
                             <ChevronLeft size={20} color="#374151" />
@@ -99,13 +99,13 @@ export default function AnalysisScreen() {
                         <TouchableOpacity style={styles.dateInputWrap} onPress={() => setShowStartPicker(true)}>
                             <Text style={styles.dateInputLabel}>開始日</Text>
                             <View style={styles.dateInput}>
-                                <Text>{startDate.toLocaleDateString('ja-JP')}</Text>
+                                <Text>{startDate.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' })}</Text>
                             </View>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.dateInputWrap} onPress={() => setShowEndPicker(true)}>
                             <Text style={styles.dateInputLabel}>終了日</Text>
                             <View style={styles.dateInput}>
-                                <Text>{endDate.toLocaleDateString('ja-JP')}</Text>
+                                <Text>{endDate.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' })}</Text>
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -116,6 +116,7 @@ export default function AnalysisScreen() {
                         value={startDate}
                         mode="date"
                         display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                        locale="ja-JP"
                         onChange={(event, date) => {
                             setShowStartPicker(Platform.OS === 'ios');
                             if (date) setStartDate(date);
@@ -128,6 +129,7 @@ export default function AnalysisScreen() {
                         value={endDate}
                         mode="date"
                         display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                        locale="ja-JP"
                         onChange={(event, date) => {
                             setShowEndPicker(Platform.OS === 'ios');
                             if (date) setEndDate(date);
