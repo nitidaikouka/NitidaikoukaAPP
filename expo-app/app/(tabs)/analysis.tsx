@@ -12,6 +12,8 @@ export default function AnalysisScreen() {
     const [selectedPeriod, setSelectedPeriod] = useState('月ごと');
     const [selectedGender, setSelectedGender] = useState('全員');
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     const changeMonth = (offset: number) => {
         const d = new Date(currentMonth);
@@ -28,6 +30,12 @@ export default function AnalysisScreen() {
             if (selectedPeriod === 'すべて') return true;
             if (selectedPeriod === '直近1ヶ月') {
                 const ago = new Date(); ago.setDate(ago.getDate() - 30); return d >= ago;
+            }
+            if (selectedPeriod === '期間指定' && startDate && endDate) {
+                const s = new Date(startDate);
+                const e = new Date(endDate);
+                e.setHours(23, 59, 59, 999);
+                return d >= s && d <= e;
             }
             return true;
         });
@@ -61,7 +69,7 @@ export default function AnalysisScreen() {
 
             <View style={styles.filterSection}>
                 <View style={styles.segmentRow}>
-                    {['月ごと', 'すべて', '直近1ヶ月'].map(p => (
+                    {['月ごと', 'すべて', '直近1ヶ月', '期間指定'].map(p => (
                         <TouchableOpacity
                             key={p} style={[styles.segBtn, selectedPeriod === p && styles.segBtnActive]}
                             onPress={() => setSelectedPeriod(p)}
@@ -80,6 +88,29 @@ export default function AnalysisScreen() {
                         <TouchableOpacity onPress={() => changeMonth(1)} style={styles.navBtn}>
                             <ChevronRight size={20} color="#374151" />
                         </TouchableOpacity>
+                    </View>
+                )}
+
+                {selectedPeriod === '期間指定' && (
+                    <View style={styles.datePickerRow}>
+                        <View style={styles.dateInputWrap}>
+                            <Text style={styles.dateInputLabel}>開始日 (YYYY-MM-DD)</Text>
+                            <TextInput
+                                style={styles.dateInput}
+                                value={startDate}
+                                onChangeText={setStartDate}
+                                placeholder="2024-01-01"
+                            />
+                        </View>
+                        <View style={styles.dateInputWrap}>
+                            <Text style={styles.dateInputLabel}>終了日 (YYYY-MM-DD)</Text>
+                            <TextInput
+                                style={styles.dateInput}
+                                value={endDate}
+                                onChangeText={setEndDate}
+                                placeholder="2024-12-31"
+                            />
+                        </View>
                     </View>
                 )}
 

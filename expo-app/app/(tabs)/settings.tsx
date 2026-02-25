@@ -20,6 +20,9 @@ export default function SettingsScreen() {
 
     const sortedMembers = [...model.members].sort((a, b) => {
         if (a.grade !== b.grade) return a.grade - b.grade;
+        if (a.gender !== b.gender) {
+            return a.gender === Gender.male ? -1 : 1;
+        }
         return a.name.localeCompare(b.name, 'ja');
     });
 

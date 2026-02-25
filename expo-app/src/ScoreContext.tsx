@@ -458,6 +458,8 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
         const newArchers = [createArcher(shotsPerRound), createArcher(shotsPerRound), createArcher(shotsPerRound)];
         setArchers(newArchers);
         setLockedBlocks({});
+        setUndoStack([]);
+        setRedoStack([]);
 
         syncToCloud(makeData({ currentArchers: newArchers, history: newHistory, sessions: newSessions, lockedBlocks: {} }));
     };
