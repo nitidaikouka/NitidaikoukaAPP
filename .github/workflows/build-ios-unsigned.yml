@@ -1,0 +1,54 @@
+name: Build Unsigned IPA for SideStore
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: 🏗 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: expo-app/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: expo-app
+        run: npm ci
+
+      - name: ⚙️ Prebuild iOS Project
+        working-directory: expo-app
+        run: npx expo prebuild --platform ios
+
+      - name: 🏗 Setup CocoaPods
+        working-directory: expo-app/ios
+        run: pod install
+
+      - name: 🚀 Build Unsigned iOS App
+        working-directory: expo-app/ios
+        run: |
+          xcodebuild build \
+            -workspace nihonukyudoapp.xcworkspace \
+            -scheme nihonukyudoapp \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath derived_data \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+      - name: 📦 Package into IPA
+        working-directory: expo-app/ios
+        run: |
+          mkdir -p Payload
+          mv derived_data/Build/Products/Release-iphoneos/nihonukyudoapp.app Payload/
+          zip -r app.ipa Payload
+
+      - name: 📤 Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sidestore-unsigned-ipa
+          path: expo-app/ios/app.ipa
