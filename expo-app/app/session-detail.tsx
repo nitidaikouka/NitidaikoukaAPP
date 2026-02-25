@@ -102,119 +102,121 @@ export default function SessionDetailScreen() {
             </View>
 
             {/* 記録グリッド - 縦横スクロールとスティッキーヘッダー */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: '100%', flexDirection: 'row-reverse' }}>
-                <ScrollView style={{ flex: 1 }} stickyHeaderIndices={[0]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                <View style={{ flexDirection: 'row-reverse' }}>
+                    <ScrollView style={{ flex: 1 }} stickyHeaderIndices={[0]} contentContainerStyle={{ paddingBottom: 100 }}>
 
-                    {/* スティッキーヘッダー部分 */}
-                    <View style={styles.stickyHeaderArea}>
-                        <View style={styles.rowHeaderCol}>
-                            <View style={styles.headerCell} />
-                            <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
-                        </View>
+                        {/* スティッキーヘッダー部分 */}
+                        <View style={styles.stickyHeaderArea}>
+                            <View style={styles.rowHeaderCol}>
+                                <View style={styles.headerCell} />
+                                <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
+                            </View>
 
-                        {session.archers.map((archer) => {
-                            if (archer.isSeparator) {
+                            {session.archers.map((archer) => {
+                                if (archer.isSeparator) {
+                                    return (
+                                        <View key={archer.id} style={[styles.archerCol, { width: 32 }]}>
+                                            <View style={styles.headerCell} />
+                                            <View style={[styles.nameCell, { backgroundColor: '#f3f4f6' }]} />
+                                        </View>
+                                    );
+                                }
+                                if (archer.isTotalCalculator) {
+                                    const groupArchers = model.getHistoryGroupArchers(session.id, archer.id);
+                                    const grandTotal = groupArchers.reduce((sum, a) => sum + a.marks.filter(m => m === Mark.hit).length, 0);
+                                    return (
+                                        <View key={archer.id} style={[styles.archerCol, { backgroundColor: '#eff6ff' }]}>
+                                            <View style={[styles.headerCell, { backgroundColor: '#3b82f6' }]}>
+                                                <Text style={styles.totalText}>{grandTotal}</Text>
+                                            </View>
+                                            <View style={styles.nameCell}>
+                                                <Text style={{ color: '#2563eb', fontWeight: 'bold' }}>計</Text>
+                                            </View>
+                                        </View>
+                                    );
+                                }
+                                const totalHits = archer.marks.filter(m => m === Mark.hit).length;
+                                const displayName = model.getDisplayName(archer.name);
                                 return (
-                                    <View key={archer.id} style={[styles.archerCol, { width: 32 }]}>
-                                        <View style={styles.headerCell} />
-                                        <View style={[styles.nameCell, { backgroundColor: '#f3f4f6' }]} />
-                                    </View>
-                                );
-                            }
-                            if (archer.isTotalCalculator) {
-                                const groupArchers = model.getHistoryGroupArchers(session.id, archer.id);
-                                const grandTotal = groupArchers.reduce((sum, a) => sum + a.marks.filter(m => m === Mark.hit).length, 0);
-                                return (
-                                    <View key={archer.id} style={[styles.archerCol, { backgroundColor: '#eff6ff' }]}>
-                                        <View style={[styles.headerCell, { backgroundColor: '#3b82f6' }]}>
-                                            <Text style={styles.totalText}>{grandTotal}</Text>
+                                    <View key={archer.id} style={styles.archerCol}>
+                                        <View style={[styles.headerCell, { backgroundColor: '#fefce8' }]}>
+                                            <Text style={styles.archerTotalText}>{totalHits}</Text>
                                         </View>
                                         <View style={styles.nameCell}>
-                                            <Text style={{ color: '#2563eb', fontWeight: 'bold' }}>計</Text>
+                                            <Text style={styles.archerName} numberOfLines={2}>{archer.name ? displayName : '—'}</Text>
+                                            {archer.grade > 0 && <Text style={styles.archerGrade}>{archer.grade}年</Text>}
                                         </View>
                                     </View>
                                 );
-                            }
-                            const totalHits = archer.marks.filter(m => m === Mark.hit).length;
-                            const displayName = model.getDisplayName(archer.name);
+                            })}
+                        </View>
+
+                        {/* 各射の記録行 */}
+                        {Array.from({ length: session.shotCount }).map((_, i) => {
+                            const index = session.shotCount - 1 - i;
+                            const isSep = index % 4 === 0 && index !== 0;
+
                             return (
-                                <View key={archer.id} style={styles.archerCol}>
-                                    <View style={[styles.headerCell, { backgroundColor: '#fefce8' }]}>
-                                        <Text style={styles.archerTotalText}>{totalHits}</Text>
+                                <View key={index} style={{ flexDirection: 'row-reverse' }}>
+                                    {/* 行番号カラム */}
+                                    <View style={styles.rowHeaderCol}>
+                                        <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
+                                            <Text style={styles.rowNumber}>{index + 1}</Text>
+                                        </View>
                                     </View>
-                                    <View style={styles.nameCell}>
-                                        <Text style={styles.archerName} numberOfLines={2}>{archer.name ? displayName : '—'}</Text>
-                                        {archer.grade > 0 && <Text style={styles.archerGrade}>{archer.grade}年</Text>}
-                                    </View>
+
+                                    {session.archers.map((archer) => {
+                                        if (archer.isSeparator) {
+                                            return (
+                                                <View key={archer.id} style={[styles.archerCol, { width: 32 }]}>
+                                                    <View style={[styles.cell, { backgroundColor: '#f3f4f6' }, isSep && styles.blockBorder]} />
+                                                </View>
+                                            );
+                                        }
+                                        if (archer.isTotalCalculator) {
+                                            const groupArchers = model.getHistoryGroupArchers(session.id, archer.id);
+                                            const isBlockBottom = index % 4 === 0;
+                                            const isSepLocal = isBlockBottom && index !== 0;
+                                            let blockTotal: number | null = null;
+                                            if (isBlockBottom) {
+                                                blockTotal = groupArchers.reduce((sum, a) => {
+                                                    let hits = 0;
+                                                    for (let offset = 0; offset < 4; offset++) {
+                                                        const ti = index + offset;
+                                                        if (ti < a.marks.length && a.marks[ti] === Mark.hit) hits++;
+                                                    }
+                                                    return sum + hits;
+                                                }, 0);
+                                            }
+                                            return (
+                                                <View key={archer.id} style={[styles.archerCol, { backgroundColor: '#eff6ff' }]}>
+                                                    <View style={[styles.cell, isSepLocal && styles.blockBorder]}>
+                                                        {blockTotal !== null && <Text style={styles.blockTotalText}>{blockTotal}</Text>}
+                                                    </View>
+                                                </View>
+                                            );
+                                        }
+                                        const mark = archer.marks[index] ?? Mark.none;
+
+                                        return (
+                                            <View key={archer.id} style={styles.archerCol}>
+                                                <TouchableOpacity
+                                                    style={[styles.cell, isSep && styles.blockBorder]}
+                                                    onPress={() => model.toggleHistoryMark(session.id, archer.id, index)}
+                                                >
+                                                    <Text style={{ color: getMarkColor(mark), fontWeight: 'bold', fontSize: 20 }}>
+                                                        {mark || ' '}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        );
+                                    })}
                                 </View>
                             );
                         })}
-                    </View>
-
-                    {/* 各射の記録行 */}
-                    {Array.from({ length: session.shotCount }).map((_, i) => {
-                        const index = session.shotCount - 1 - i;
-                        const isSep = index % 4 === 0 && index !== 0;
-
-                        return (
-                            <View key={index} style={{ flexDirection: 'row-reverse' }}>
-                                {/* 行番号カラム */}
-                                <View style={styles.rowHeaderCol}>
-                                    <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
-                                        <Text style={styles.rowNumber}>{index + 1}</Text>
-                                    </View>
-                                </View>
-
-                                {session.archers.map((archer) => {
-                                    if (archer.isSeparator) {
-                                        return (
-                                            <View key={archer.id} style={[styles.archerCol, { width: 32 }]}>
-                                                <View style={[styles.cell, { backgroundColor: '#f3f4f6' }, isSep && styles.blockBorder]} />
-                                            </View>
-                                        );
-                                    }
-                                    if (archer.isTotalCalculator) {
-                                        const groupArchers = model.getHistoryGroupArchers(session.id, archer.id);
-                                        const isBlockBottom = index % 4 === 0;
-                                        const isSepLocal = isBlockBottom && index !== 0;
-                                        let blockTotal: number | null = null;
-                                        if (isBlockBottom) {
-                                            blockTotal = groupArchers.reduce((sum, a) => {
-                                                let hits = 0;
-                                                for (let offset = 0; offset < 4; offset++) {
-                                                    const ti = index + offset;
-                                                    if (ti < a.marks.length && a.marks[ti] === Mark.hit) hits++;
-                                                }
-                                                return sum + hits;
-                                            }, 0);
-                                        }
-                                        return (
-                                            <View key={index} style={[styles.archerCol, { backgroundColor: '#eff6ff' }]}>
-                                                <View style={[styles.cell, isSepLocal && styles.blockBorder]}>
-                                                    {blockTotal !== null && <Text style={styles.blockTotalText}>{blockTotal}</Text>}
-                                                </View>
-                                            </View>
-                                        );
-                                    }
-                                    const mark = archer.marks[index] ?? Mark.none;
-
-                                    return (
-                                        <View key={archer.id} style={styles.archerCol}>
-                                            <TouchableOpacity
-                                                style={[styles.cell, isSep && styles.blockBorder]}
-                                                onPress={() => model.toggleHistoryMark(session.id, archer.id, index)}
-                                            >
-                                                <Text style={{ color: getMarkColor(mark), fontWeight: 'bold', fontSize: 20 }}>
-                                                    {mark || ' '}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        );
-                    })}
-                </ScrollView>
+                    </ScrollView>
+                </View>
             </ScrollView>
         </SafeAreaView>
     );

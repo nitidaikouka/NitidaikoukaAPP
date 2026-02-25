@@ -10,7 +10,7 @@ import { Mark, Archer, Gender } from '../../src/types';
 import {
     Plus, Users, Settings2, RotateCcw, RotateCw,
     Trash2, ChevronLeft, ChevronRight, Save, Menu, X,
-    Lock, Unlock, LayoutList, Sigma
+    Lock, Unlock, LayoutList, Sigma, FileUp
 } from 'lucide-react-native';
 
 const CELL_HEIGHT = 44;
@@ -61,12 +61,31 @@ export default function RecordScreen() {
     };
 
     const handleImport = () => {
-        Alert.alert('復元', 'バックアップ文字列を入力してください。', [
+        Alert.alert('復元', '復元方法を選択してください。', [
             { text: 'キャンセル', style: 'cancel' },
             {
-                text: '復元', onPress: () => {
-                    // ここでは単一のダイアログで入力を受けるのは難しいので、簡易的に実装。本来は専用UIが望ましい。
-                    // ユーザーの要望に応え、まずバックアップ機能を復活させる。
+                text: 'ファイルから復元',
+                onPress: async () => {
+                    const success = await model.importDataFromPicker();
+                    if (success) Alert.alert('復元完了', 'データを正常に復元しました。');
+                }
+            },
+            {
+                text: 'コードを入力',
+                onPress: () => {
+                    Alert.prompt('コード入力', 'バックアップ文字列を貼り付けてください。', [
+                        { text: 'キャンセル', style: 'cancel' },
+                        {
+                            text: '復元',
+                            onPress: (code) => {
+                                if (code && model.importDataFromCode(code)) {
+                                    Alert.alert('復元完了', 'データを正常に復元しました。');
+                                } else {
+                                    Alert.alert('エラー', '無効なコードです。');
+                                }
+                            }
+                        }
+                    ]);
                 }
             }
         ]);
@@ -139,135 +158,137 @@ export default function RecordScreen() {
             </View>
 
             {/* 記録グリッド - 縦横スクロールとスティッキーヘッダーの両立 */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: '100%', flexDirection: 'row-reverse' }}>
-                <ScrollView style={{ flex: 1 }} stickyHeaderIndices={[0]}>
-                    {/* スティッキーヘッダー部分（的中数と名前） */}
-                    <View style={styles.stickyHeaderArea}>
-                        {/* 行番号のカラム頭 */}
-                        <View style={styles.rowHeaderCol}>
-                            <View style={styles.headerCell} />
-                            <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
-                        </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                <View style={{ flexDirection: 'row-reverse' }}>
+                    <ScrollView style={{ flex: 1 }} stickyHeaderIndices={[0]} contentContainerStyle={{ paddingBottom: 100 }}>
+                        {/* スティッキーヘッダー部分 */}
+                        <View style={styles.stickyHeaderArea}>
+                            {/* 行番号のカラム頭 */}
+                            <View style={styles.rowHeaderCol}>
+                                <View style={styles.headerCell} />
+                                <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
+                            </View>
 
-                        {model.archers.map((archer) => {
-                            if (archer.isSeparator) {
-                                return (
-                                    <TouchableOpacity key={archer.id} style={[styles.archerCol, { width: 32 }]} onPress={() => setShowItemMenu({ id: archer.id, type: 'separator' })}>
-                                        <View style={styles.headerCell} />
-                                        <View style={[styles.nameCell, { backgroundColor: '#f3f4f6' }]} />
-                                    </TouchableOpacity>
-                                );
-                            }
-                            if (archer.isTotalCalculator) {
-                                const groupArchers = model.getGroupArchers(archer.id);
-                                const grandTotal = groupArchers.reduce((sum, a) => sum + a.marks.filter(m => m === Mark.hit).length, 0);
-                                return (
-                                    <View key={archer.id} style={[styles.archerCol, { backgroundColor: '#eff6ff' }]}>
-                                        <TouchableOpacity style={[styles.headerCell, { backgroundColor: '#3b82f6' }]} onPress={() => setShowItemMenu({ id: archer.id, type: 'total' })}>
-                                            <Text style={styles.totalText}>{grandTotal}</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={styles.nameCell} onPress={() => setShowItemMenu({ id: archer.id, type: 'total' })}>
-                                            <Text style={{ color: '#2563eb', fontWeight: 'bold', fontSize: 13 }}>計</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                );
-                            }
-                            const totalHits = archer.marks.filter(m => m === Mark.hit).length;
-                            const displayName = model.getDisplayName(archer.name);
-                            return (
-                                <View key={archer.id} style={styles.archerCol}>
-                                    <TouchableOpacity style={[styles.headerCell, { backgroundColor: '#fefce8' }]} onPress={() => setShowArcherMenu(archer.id)}>
-                                        <Text style={styles.archerTotalText}>{totalHits}</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.nameCell} onPress={() => setShowMemberSelect(archer.id)}>
-                                        <Text style={styles.archerName} numberOfLines={2}>{archer.name ? displayName : '選択'}</Text>
-                                        {archer.grade > 0 && <Text style={styles.archerGrade}>{archer.grade}年</Text>}
-                                    </TouchableOpacity>
-                                </View>
-                            );
-                        })}
-                    </View>
-
-                    {/* 各射の記録行 */}
-                    {Array.from({ length: model.shotsPerRound }).map((_, i) => {
-                        const index = model.shotsPerRound - 1 - i;
-                        const isSep = index % 4 === 0 && index !== 0;
-
-                        return (
-                            <View key={index} style={{ flexDirection: 'row-reverse' }}>
-                                {/* 行番号カラム */}
-                                <View style={styles.rowHeaderCol}>
-                                    <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
-                                        <Text style={styles.rowNumber}>{index + 1}</Text>
-                                    </View>
-                                </View>
-
-                                {/* 各アーチャーのセル列 */}
-                                {model.archers.map((archer) => {
-                                    if (archer.isSeparator) {
-                                        return (
-                                            <View key={archer.id} style={[styles.archerCol, { width: 32 }]}>
-                                                <View style={[styles.cell, { backgroundColor: '#f3f4f6' }, isSep && styles.blockBorder]} />
-                                            </View>
-                                        );
-                                    }
-                                    if (archer.isTotalCalculator) {
-                                        const groupArchers = model.getGroupArchers(archer.id);
-                                        const isBlockBottom = index % 4 === 0;
-                                        const isLocked = model.lockedBlocks[`${archer.id}-${index}`];
-                                        let blockTotal: number | null = null;
-                                        if (isBlockBottom) {
-                                            blockTotal = groupArchers.reduce((sum, a) => {
-                                                let hits = 0;
-                                                for (let offset = 0; offset < 4; offset++) {
-                                                    const ti = index + offset;
-                                                    if (ti < a.marks.length && a.marks[ti] === Mark.hit) hits++;
-                                                }
-                                                return sum + hits;
-                                            }, 0);
-                                        }
-
-                                        return (
-                                            <View key={archer.id} style={[styles.archerCol, { backgroundColor: '#eff6ff' }]}>
-                                                <TouchableOpacity
-                                                    style={[styles.cell, isSep && styles.blockBorder, { position: 'relative' }]}
-                                                    disabled={!isBlockBottom}
-                                                    onPress={() => isBlockBottom && model.toggleLock(archer.id, index)}
-                                                >
-                                                    {blockTotal !== null && <Text style={styles.blockTotalText}>{blockTotal}</Text>}
-                                                    {isBlockBottom && (
-                                                        <View style={styles.lockIconContainer}>
-                                                            {isLocked ? <Lock size={10} color="#ef4444" /> : <Unlock size={10} color="#9ca3af" />}
-                                                        </View>
-                                                    )}
-                                                </TouchableOpacity>
-                                            </View>
-                                        );
-                                    }
-
-                                    const calculatorId = model.getCalculatorForArcher(archer.id);
-                                    const mark = archer.marks[index] ?? Mark.none;
-                                    const blockIndex = Math.floor(index / 4) * 4;
-                                    const isLocked = calculatorId && model.lockedBlocks[`${calculatorId}-${blockIndex}`];
-
+                            {model.archers.map((archer) => {
+                                if (archer.isSeparator) {
                                     return (
-                                        <View key={archer.id} style={styles.archerCol}>
-                                            <TouchableOpacity
-                                                style={[styles.cell, isSep && styles.blockBorder, isLocked && { backgroundColor: '#f3f4f6' }]}
-                                                onPress={() => !isLocked && model.toggleMark(archer.id, index)}
-                                                disabled={isLocked}
-                                            >
-                                                <Text style={{ color: getMarkColor(mark), fontWeight: 'bold', fontSize: 20 }}>
-                                                    {mark || ' '}
-                                                </Text>
+                                        <TouchableOpacity key={archer.id} style={[styles.archerCol, { width: 32 }]} onPress={() => setShowItemMenu({ id: archer.id, type: 'separator' })}>
+                                            <View style={styles.headerCell} />
+                                            <View style={[styles.nameCell, { backgroundColor: '#f3f4f6' }]} />
+                                        </TouchableOpacity>
+                                    );
+                                }
+                                if (archer.isTotalCalculator) {
+                                    const groupArchers = model.getGroupArchers(archer.id);
+                                    const grandTotal = groupArchers.reduce((sum, a) => sum + a.marks.filter(m => m === Mark.hit).length, 0);
+                                    return (
+                                        <View key={archer.id} style={[styles.archerCol, { backgroundColor: '#eff6ff' }]}>
+                                            <TouchableOpacity style={[styles.headerCell, { backgroundColor: '#3b82f6' }]} onPress={() => setShowItemMenu({ id: archer.id, type: 'total' })}>
+                                                <Text style={styles.totalText}>{grandTotal}</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={styles.nameCell} onPress={() => setShowItemMenu({ id: archer.id, type: 'total' })}>
+                                                <Text style={{ color: '#2563eb', fontWeight: 'bold', fontSize: 13 }}>計</Text>
                                             </TouchableOpacity>
                                         </View>
                                     );
-                                })}
-                            </View>
-                        );
-                    })}
-                </ScrollView>
+                                }
+                                const totalHits = archer.marks.filter(m => m === Mark.hit).length;
+                                const displayName = model.getDisplayName(archer.name);
+                                return (
+                                    <View key={archer.id} style={styles.archerCol}>
+                                        <TouchableOpacity style={[styles.headerCell, { backgroundColor: '#fefce8' }]} onPress={() => setShowArcherMenu(archer.id)}>
+                                            <Text style={styles.archerTotalText}>{totalHits}</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.nameCell} onPress={() => setShowMemberSelect(archer.id)}>
+                                            <Text style={styles.archerName} numberOfLines={2}>{archer.name ? displayName : '選択'}</Text>
+                                            {archer.grade > 0 && <Text style={styles.archerGrade}>{archer.grade}年</Text>}
+                                        </TouchableOpacity>
+                                    </View>
+                                );
+                            })}
+                        </View>
+
+                        {/* 各射の記録行 */}
+                        {Array.from({ length: model.shotsPerRound }).map((_, i) => {
+                            const index = model.shotsPerRound - 1 - i;
+                            const isSep = index % 4 === 0 && index !== 0;
+
+                            return (
+                                <View key={index} style={{ flexDirection: 'row-reverse' }}>
+                                    {/* 行番号カラム */}
+                                    <View style={styles.rowHeaderCol}>
+                                        <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
+                                            <Text style={styles.rowNumber}>{index + 1}</Text>
+                                        </View>
+                                    </View>
+
+                                    {/* 各アーチャーのセル列 */}
+                                    {model.archers.map((archer) => {
+                                        if (archer.isSeparator) {
+                                            return (
+                                                <View key={archer.id} style={[styles.archerCol, { width: 32 }]}>
+                                                    <View style={[styles.cell, { backgroundColor: '#f3f4f6' }, isSep && styles.blockBorder]} />
+                                                </View>
+                                            );
+                                        }
+                                        if (archer.isTotalCalculator) {
+                                            const groupArchers = model.getGroupArchers(archer.id);
+                                            const isBlockBottom = index % 4 === 0;
+                                            const isLocked = model.lockedBlocks[`${archer.id}-${index}`];
+                                            let blockTotal: number | null = null;
+                                            if (isBlockBottom) {
+                                                blockTotal = groupArchers.reduce((sum, a) => {
+                                                    let hits = 0;
+                                                    for (let offset = 0; offset < 4; offset++) {
+                                                        const ti = index + offset;
+                                                        if (ti < a.marks.length && a.marks[ti] === Mark.hit) hits++;
+                                                    }
+                                                    return sum + hits;
+                                                }, 0);
+                                            }
+
+                                            return (
+                                                <View key={archer.id} style={[styles.archerCol, { backgroundColor: '#eff6ff' }]}>
+                                                    <TouchableOpacity
+                                                        style={[styles.cell, isSep && styles.blockBorder, { position: 'relative' }]}
+                                                        disabled={!isBlockBottom}
+                                                        onPress={() => isBlockBottom && model.toggleLock(archer.id, index)}
+                                                    >
+                                                        {blockTotal !== null && <Text style={styles.blockTotalText}>{blockTotal}</Text>}
+                                                        {isBlockBottom && (
+                                                            <View style={styles.lockIconContainer}>
+                                                                {isLocked ? <Lock size={10} color="#ef4444" /> : <Unlock size={10} color="#9ca3af" />}
+                                                            </View>
+                                                        )}
+                                                    </TouchableOpacity>
+                                                </View>
+                                            );
+                                        }
+
+                                        const calculatorId = model.getCalculatorForArcher(archer.id);
+                                        const mark = archer.marks[index] ?? Mark.none;
+                                        const blockIndex = Math.floor(index / 4) * 4;
+                                        const isLocked = calculatorId && model.lockedBlocks[`${calculatorId}-${blockIndex}`];
+
+                                        return (
+                                            <View key={archer.id} style={styles.archerCol}>
+                                                <TouchableOpacity
+                                                    style={[styles.cell, isSep && styles.blockBorder, isLocked && { backgroundColor: '#f3f4f6' }]}
+                                                    onPress={() => !isLocked && model.toggleMark(archer.id, index)}
+                                                    disabled={isLocked}
+                                                >
+                                                    <Text style={{ color: getMarkColor(mark), fontWeight: 'bold', fontSize: 20 }}>
+                                                        {mark || ' '}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        );
+                                    })}
+                                </View>
+                            );
+                        })}
+                    </ScrollView>
+                </View>
             </ScrollView>
 
             {/* モーダル類 */}
@@ -318,10 +339,18 @@ export default function RecordScreen() {
                             </View>
 
                             <View style={styles.menuSection}>
-                                <Text style={styles.menuSectionTitle}>バックアップ</Text>
+                                <Text style={styles.menuSectionTitle}>バックアップ・復元</Text>
+                                <TouchableOpacity style={styles.menuItem} onPress={model.exportDataToFile}>
+                                    <Save size={20} color="#3b82f6" />
+                                    <Text style={styles.menuItemText}>ファイルとして保存 (シェア)</Text>
+                                </TouchableOpacity>
                                 <TouchableOpacity style={styles.menuItem} onPress={handleBackup}>
                                     <RotateCw size={20} color="#3b82f6" />
-                                    <Text style={styles.menuItemText}>データをバックアップ（書き出し）</Text>
+                                    <Text style={styles.menuItemText}>コードを表示 (コピー用)</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.menuItem} onPress={handleImport}>
+                                    <FileUp size={20} color="#10b981" />
+                                    <Text style={styles.menuItemText}>ファイル・コードから復元</Text>
                                 </TouchableOpacity>
                             </View>
 
@@ -468,8 +497,8 @@ const styles = StyleSheet.create({
     archerName: { fontSize: 12, fontWeight: 'bold', textAlign: 'center', color: '#374151' },
     archerGrade: { fontSize: 9, color: '#9ca3af', marginTop: 1 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-    keyboardAvoidingView: { width: '100%' },
-    sideMenu: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 60 },
+    keyboardAvoidingView: { flex: 1, justifyContent: 'flex-end' },
+    sideMenu: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 60, maxHeight: '90%' },
     menuHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
     menuTitle: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
     menuSection: { marginBottom: 32 },

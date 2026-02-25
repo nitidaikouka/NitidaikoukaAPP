@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
     View, Text, ScrollView, TouchableOpacity, SafeAreaView,
-    FlatList, StyleSheet, StatusBar, TextInput
+    FlatList, StyleSheet, StatusBar, TextInput, Platform
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useScoreModel } from '../../src/ScoreContext';
 import { Gender, Mark } from '../../src/types';
 import { ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react-native';
@@ -12,8 +13,10 @@ export default function AnalysisScreen() {
     const [selectedPeriod, setSelectedPeriod] = useState('月ごと');
     const [selectedGender, setSelectedGender] = useState('全員');
     const [currentMonth, setCurrentMonth] = useState(new Date());
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    const [endDate, setEndDate] = useState(new Date());
+    const [showStartPicker, setShowStartPicker] = useState(false);
+    const [showEndPicker, setShowEndPicker] = useState(false);
 
     const changeMonth = (offset: number) => {
         const d = new Date(currentMonth);
@@ -93,25 +96,43 @@ export default function AnalysisScreen() {
 
                 {selectedPeriod === '期間指定' && (
                     <View style={styles.datePickerRow}>
-                        <View style={styles.dateInputWrap}>
-                            <Text style={styles.dateInputLabel}>開始日 (YYYY-MM-DD)</Text>
-                            <TextInput
-                                style={styles.dateInput}
-                                value={startDate}
-                                onChangeText={setStartDate}
-                                placeholder="2024-01-01"
-                            />
-                        </View>
-                        <View style={styles.dateInputWrap}>
-                            <Text style={styles.dateInputLabel}>終了日 (YYYY-MM-DD)</Text>
-                            <TextInput
-                                style={styles.dateInput}
-                                value={endDate}
-                                onChangeText={setEndDate}
-                                placeholder="2024-12-31"
-                            />
-                        </View>
+                        <TouchableOpacity style={styles.dateInputWrap} onPress={() => setShowStartPicker(true)}>
+                            <Text style={styles.dateInputLabel}>開始日</Text>
+                            <View style={styles.dateInput}>
+                                <Text>{startDate.toLocaleDateString('ja-JP')}</Text>
+                            </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.dateInputWrap} onPress={() => setShowEndPicker(true)}>
+                            <Text style={styles.dateInputLabel}>終了日</Text>
+                            <View style={styles.dateInput}>
+                                <Text>{endDate.toLocaleDateString('ja-JP')}</Text>
+                            </View>
+                        </TouchableOpacity>
                     </View>
+                )}
+
+                {showStartPicker && (
+                    <DateTimePicker
+                        value={startDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                        onChange={(event, date) => {
+                            setShowStartPicker(Platform.OS === 'ios');
+                            if (date) setStartDate(date);
+                        }}
+                    />
+                )}
+
+                {showEndPicker && (
+                    <DateTimePicker
+                        value={endDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                        onChange={(event, date) => {
+                            setShowEndPicker(Platform.OS === 'ios');
+                            if (date) setEndDate(date);
+                        }}
+                    />
                 )}
 
                 <View style={styles.segmentRow}>
@@ -187,5 +208,5 @@ const styles = StyleSheet.create({
     datePickerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, paddingHorizontal: 4 },
     dateInputWrap: { flex: 1, gap: 4 },
     dateInputLabel: { fontSize: 10, color: '#9ca3af', fontWeight: 'bold' },
-    dateInput: { backgroundColor: '#f3f4f6', height: 40, borderRadius: 8, paddingHorizontal: 10, fontSize: 14, fontWeight: '500' },
+    dateInput: { backgroundColor: '#f3f4f6', height: 40, borderRadius: 8, paddingHorizontal: 10, fontSize: 14, fontWeight: '500', justifyContent: 'center' },
 });

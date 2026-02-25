@@ -1,8 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Gender, Mark, Member, Alumni, Archer, PracticeRecord, SessionRecord, SavedData } from './types';
 import { db, auth } from './firebase';
 import { ref, set, onValue } from 'firebase/database';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 
 export const createArcher = (count: number): Archer => ({
     id: Math.random().toString(36).slice(2),
@@ -107,6 +111,10 @@ export interface ScoreContextType {
     updateArcherInfo: (archerId: string, name: string, gender: Gender, grade: number, isGuest: boolean) => void;
     moveArcher: (sourceId: string, targetId: string) => void;
     saveSessionAndReset: (note: string) => void;
+    exportDataToString: () => string;
+    exportDataToFile: () => Promise<void>;
+    importDataFromPicker: () => Promise<boolean>;
+    importDataFromCode: (json: string) => boolean;
 
     addMember: (name: string, gender: Gender, grade: number) => void;
     updateMember: (id: string, name: string, gender: Gender, grade: number) => void;
@@ -657,6 +665,62 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
         return JSON.stringify(makeData());
     };
 
+    const exportDataToFile = async () => {
+        try {
+            const dataStr = exportDataToString();
+            const fileName = `kyudo_backup_${new Date().toISOString().split('T')[0]}.json`;
+            const fileUri = FileSystem.cacheDirectory + fileName;
+            await FileSystem.writeAsStringAsync(fileUri, dataStr);
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(fileUri);
+            } else {
+                Alert.alert('エラー', 'このデバイスはファイル共有をサポートしていません。');
+            }
+        } catch (error) {
+            console.error('Export failed:', error);
+            Alert.alert('エラー', 'バックアップの作成に失敗しました。');
+        }
+    };
+
+    const importDataFromPicker = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: 'application/json',
+                copyToCacheDirectory: true
+            });
+            if (result.canceled) return false;
+
+            const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri);
+            return importDataFromCode(fileContent);
+        } catch (error) {
+            console.error('Import failed:', error);
+            Alert.alert('エラー', 'ファイルの読み込みに失敗しました。');
+            return false;
+        }
+    };
+
+    const importDataFromCode = (json: string) => {
+        try {
+            const data: SavedData = JSON.parse(json);
+            if (!data.sessions || !data.members) throw new Error('Invalid format');
+
+            setArchers(data.currentArchers || []);
+            setMembers(data.members || []);
+            setAlumni(data.alumni || []);
+            setHistory(data.history || []);
+            setSessions(data.sessions || []);
+            setTrash(data.trash || []);
+            setShotsPerRound(data.shotsPerRound || 12);
+            setLockedBlocks(data.lockedBlocks || {});
+
+            syncToCloud(data);
+            return true;
+        } catch (error) {
+            console.error('Import failed:', error);
+            return false;
+        }
+    };
+
     const importDataFromString = (json: string) => {
         try {
             const data: SavedData = JSON.parse(json);
@@ -696,7 +760,8 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
             toggleHistoryMark, updateHistoryArcherInfo, moveHistoryArcher,
             updateSessionNote, updateSessionDate,
             getDisplayName, getGroupArchers, getHistoryGroupArchers,
-            getCalculatorForArcher, exportDataToString, importDataFromString,
+            getCalculatorForArcher, exportDataToString, exportDataToFile,
+            importDataFromPicker, importDataFromCode,
             resetCurrentSession,
         }}>
             {children}
