@@ -128,7 +128,7 @@ export default function RecordScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <View style={[styles.statusDot, { backgroundColor: syncColor }]} />
                     <View>
-                        <Text style={styles.headerTitle}>現在の記録表</Text>
+                        <Text style={styles.headerTitle}>【更新済】現在の記録表 (v2.1)</Text>
                         <Text style={styles.headerSubtitle}>{model.shotsPerRound}本設定</Text>
                     </View>
                 </View>
