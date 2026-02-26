@@ -128,7 +128,7 @@ export default function RecordScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <View style={[styles.statusDot, { backgroundColor: syncColor }]} />
                     <View>
-                        <Text style={styles.headerTitle}>【更新済】現在の記録表 (v2.1)</Text>
+                        <Text style={styles.headerTitle}>【更新済】現在の記録表 (v2.2)</Text>
                         <Text style={styles.headerSubtitle}>{model.shotsPerRound}本設定</Text>
                     </View>
                 </View>
@@ -500,20 +500,52 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: '#e5e7eb'
     },
     actionBtnText: { fontSize: 13, fontWeight: '600', color: '#4b5563' },
-    stickyHeaderArea: { flexDirection: 'row-reverse', borderBottomWidth: 1, borderBottomColor: '#111827', backgroundColor: '#fff' },
-    rowHeaderCol: { width: ROW_HEADER_COL_WIDTH, borderRightWidth: 1, borderColor: '#e5e7eb' },
-    archerCol: { width: ARCHER_COL_WIDTH, borderRightWidth: 1, borderColor: '#e5e7eb' },
+    stickyHeaderArea: {
+        flexDirection: 'row',
+        borderBottomWidth: 1,
+        borderBottomColor: '#111827',
+        backgroundColor: '#fff'
+    },
+    rowHeaderCol: {
+        width: ROW_HEADER_COL_WIDTH,
+        minWidth: ROW_HEADER_COL_WIDTH,
+        maxWidth: ROW_HEADER_COL_WIDTH,
+        borderRightWidth: 1,
+        borderColor: '#e5e7eb',
+        flexDirection: 'column'
+    },
+    archerCol: {
+        width: ARCHER_COL_WIDTH,
+        minWidth: ARCHER_COL_WIDTH,
+        maxWidth: ARCHER_COL_WIDTH,
+        borderRightWidth: 1,
+        borderColor: '#e5e7eb',
+        flexDirection: 'column'
+    },
     headerCell: {
-        height: HEADER_CELL_HEIGHT, alignItems: 'center', justifyContent: 'center',
-        borderBottomWidth: 1, borderColor: '#e5e7eb'
+        height: HEADER_CELL_HEIGHT,
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderBottomWidth: 1,
+        borderColor: '#e5e7eb'
     },
     nameCell: {
-        height: NAME_CELL_HEIGHT, alignItems: 'center', justifyContent: 'center',
-        backgroundColor: '#f9fafb', padding: 4
+        height: NAME_CELL_HEIGHT,
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f9fafb',
+        padding: 4
     },
     cell: {
-        height: CELL_HEIGHT, alignItems: 'center', justifyContent: 'center',
-        borderBottomWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fff'
+        height: CELL_HEIGHT,
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderBottomWidth: 1,
+        borderColor: '#e5e7eb',
+        backgroundColor: '#fff'
     },
     blockBorder: { borderBottomWidth: 2, borderColor: '#111827' },
     rowNumber: { fontSize: 10, color: '#9ca3af', fontWeight: 'bold' },
