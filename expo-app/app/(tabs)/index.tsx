@@ -160,25 +160,19 @@ export default function RecordScreen() {
             </View>
 
             {/* 記録グリッド - 縦横スクロールとスティッキーヘッダーの両立 */}
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, backgroundColor: '#fff' }}>
                 <ScrollView
                     ref={scrollRef}
                     horizontal
                     showsHorizontalScrollIndicator={true}
-                    contentContainerStyle={{ minWidth: '100%', flexDirection: 'row-reverse' }}
+                    contentContainerStyle={{ minWidth: '100%', justifyContent: 'flex-end' }}
                     onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
                 >
-                    <View style={{ width: Math.max(0, model.archers.length + 1) * 52, height: '100%' }}>
+                    <View style={{ width: Math.max(0, model.archers.length + 1) * 52 }}>
                         <ScrollView style={{ flex: 1 }} stickyHeaderIndices={[0]} contentContainerStyle={{ paddingBottom: 100 }}>
                             {/* スティッキーヘッダー部分 */}
-                            <View style={[styles.stickyHeaderArea, { flexDirection: 'row-reverse' }]}>
-                                {/* 行番号のカラム頭 */}
-                                <View style={styles.rowHeaderCol}>
-                                    <View style={styles.headerCell} />
-                                    <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
-                                </View>
-
-                                {model.archers.map((archer) => {
+                            <View style={[styles.stickyHeaderArea, { flexDirection: 'row', width: Math.max(0, model.archers.length + 1) * 52, borderBottomWidth: 1, borderBottomColor: '#111827', backgroundColor: '#fff' }]}>
+                                {model.archers.slice().reverse().map((archer) => {
                                     if (archer.isSeparator) {
                                         return (
                                             <TouchableOpacity key={archer.id} style={[styles.archerCol, { width: 32 }]} onPress={() => setShowItemMenu({ id: archer.id, type: 'separator' })}>
@@ -215,6 +209,12 @@ export default function RecordScreen() {
                                         </View>
                                     );
                                 })}
+
+                                {/* 行番号のカラム頭 */}
+                                <View style={styles.rowHeaderCol}>
+                                    <View style={styles.headerCell} />
+                                    <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
+                                </View>
                             </View>
 
                             {/* 各射の記録行 */}
@@ -223,16 +223,9 @@ export default function RecordScreen() {
                                 const isSep = index % 4 === 0 && index !== 0;
 
                                 return (
-                                    <View key={index} style={{ flexDirection: 'row-reverse', width: '100%' }}>
-                                        {/* 行番号カラム */}
-                                        <View style={styles.rowHeaderCol}>
-                                            <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
-                                                <Text style={styles.rowNumber}>{index + 1}</Text>
-                                            </View>
-                                        </View>
-
+                                    <View key={index} style={{ flexDirection: 'row', width: Math.max(0, model.archers.length + 1) * 52 }}>
                                         {/* 各アーチャーのセル列 */}
-                                        {model.archers.map((archer) => {
+                                        {model.archers.slice().reverse().map((archer) => {
                                             if (archer.isSeparator) {
                                                 return (
                                                     <View key={archer.id} style={[styles.archerCol, { width: 32 }]}>
@@ -293,6 +286,13 @@ export default function RecordScreen() {
                                                 </View>
                                             );
                                         })}
+
+                                        {/* 行番号カラム */}
+                                        <View style={styles.rowHeaderCol}>
+                                            <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
+                                                <Text style={styles.rowNumber}>{index + 1}</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 );
                             })}
