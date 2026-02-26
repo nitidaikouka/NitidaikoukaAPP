@@ -165,14 +165,19 @@ export default function RecordScreen() {
                     ref={scrollRef}
                     horizontal
                     showsHorizontalScrollIndicator={true}
-                    contentContainerStyle={{ minWidth: '100%', flexDirection: 'row' }}
-                    onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+                    contentContainerStyle={{ minWidth: '100%', flexDirection: 'row-reverse' }}
+                    onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
                 >
-                    <View style={{ flexGrow: 1 }} />
-                    <View style={{ width: (model.archers.length + 1) * 52 }}>
+                    <View style={{ width: Math.max(0, model.archers.length + 1) * 52, height: '100%' }}>
                         <ScrollView style={{ flex: 1 }} stickyHeaderIndices={[0]} contentContainerStyle={{ paddingBottom: 100 }}>
                             {/* スティッキーヘッダー部分 */}
-                            <View style={[styles.stickyHeaderArea, { flexDirection: 'row' }]}>
+                            <View style={[styles.stickyHeaderArea, { flexDirection: 'row-reverse' }]}>
+                                {/* 行番号のカラム頭 */}
+                                <View style={styles.rowHeaderCol}>
+                                    <View style={styles.headerCell} />
+                                    <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
+                                </View>
+
                                 {model.archers.map((archer) => {
                                     if (archer.isSeparator) {
                                         return (
@@ -210,12 +215,6 @@ export default function RecordScreen() {
                                         </View>
                                     );
                                 })}
-
-                                {/* 行番号のカラム頭 */}
-                                <View style={styles.rowHeaderCol}>
-                                    <View style={styles.headerCell} />
-                                    <View style={[styles.nameCell, { backgroundColor: '#f9fafb' }]} />
-                                </View>
                             </View>
 
                             {/* 各射の記録行 */}
@@ -224,7 +223,14 @@ export default function RecordScreen() {
                                 const isSep = index % 4 === 0 && index !== 0;
 
                                 return (
-                                    <View key={index} style={{ flexDirection: 'row', width: '100%' }}>
+                                    <View key={index} style={{ flexDirection: 'row-reverse', width: '100%' }}>
+                                        {/* 行番号カラム */}
+                                        <View style={styles.rowHeaderCol}>
+                                            <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
+                                                <Text style={styles.rowNumber}>{index + 1}</Text>
+                                            </View>
+                                        </View>
+
                                         {/* 各アーチャーのセル列 */}
                                         {model.archers.map((archer) => {
                                             if (archer.isSeparator) {
@@ -287,13 +293,6 @@ export default function RecordScreen() {
                                                 </View>
                                             );
                                         })}
-
-                                        {/* 行番号カラム */}
-                                        <View style={styles.rowHeaderCol}>
-                                            <View style={[styles.cell, { backgroundColor: '#f9fafb' }, isSep && styles.blockBorder]}>
-                                                <Text style={styles.rowNumber}>{index + 1}</Text>
-                                            </View>
-                                        </View>
                                     </View>
                                 );
                             })}
