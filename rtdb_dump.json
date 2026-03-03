@@ -1,0 +1,246 @@
+{
+  "members": [
+    {
+      "gender": "男子",
+      "grade": 3,
+      "id": "220EFAF7-750E-41C1-BCA7-A272AA901A97",
+      "name": "白鳥 聡也"
+    },
+    {
+      "gender": "男子",
+      "grade": 3,
+      "id": "5F6FC191-178D-475A-B7F2-C4F45AD91F26",
+      "name": "鶴野 悠斗"
+    },
+    {
+      "gender": "男子",
+      "grade": 3,
+      "id": "BFD46958-DEC6-4222-B969-F3603BEA6FD2",
+      "name": "川嶋 孝太朗"
+    },
+    {
+      "gender": "女子",
+      "grade": 3,
+      "id": "DC5556FB-BFE1-4BF4-A265-D8457712D325",
+      "name": "本間 未夏"
+    },
+    {
+      "gender": "男子",
+      "grade": 3,
+      "id": "86A86968-542D-47AC-9D3F-2346AA8B4302",
+      "name": "河原 脩平"
+    },
+    {
+      "gender": "男子",
+      "grade": 2,
+      "id": "B1BDB39E-E6DB-4EB2-AD7A-1F25B0AF539F",
+      "name": "石上 裕人"
+    },
+    {
+      "gender": "男子",
+      "grade": 2,
+      "id": "77CB9543-11EA-4352-8387-D9D0C89B358C",
+      "name": "田端 航大"
+    },
+    {
+      "gender": "男子",
+      "grade": 2,
+      "id": "610F7C18-23F9-4C53-9201-E4A5600255F7",
+      "name": "梶原 啓司"
+    },
+    {
+      "gender": "男子",
+      "grade": 2,
+      "id": "BB650833-9A3A-4648-969D-721FCFFAFF20",
+      "name": "張 星児"
+    },
+    {
+      "gender": "男子",
+      "grade": 2,
+      "id": "4E5A0126-0B15-497B-909F-16B9FC35A217",
+      "name": "小堀 蓮"
+    },
+    {
+      "gender": "男子",
+      "grade": 2,
+      "id": "65271B2D-6829-4746-ACF5-1FF9679BAD68",
+      "name": "桐谷 直記"
+    },
+    {
+      "gender": "女子",
+      "grade": 2,
+      "id": "292AEAB1-6951-4CDF-86DB-BBAD322CFB98",
+      "name": "渡辺 成美"
+    },
+    {
+      "gender": "男子",
+      "grade": 2,
+      "id": "24822CB0-D19B-4B38-885C-DE8880B7791B",
+      "name": "笹原 健太郎"
+    },
+    {
+      "gender": "女子",
+      "grade": 1,
+      "id": "9EFD963A-4EA8-43DF-9528-EF44F0646E07",
+      "name": "石川 紗羽"
+    },
+    {
+      "gender": "男子",
+      "grade": 1,
+      "id": "40E36B76-A3A5-4974-8A5B-713CEBC6FB0F",
+      "name": "小野里 翔"
+    },
+    {
+      "gender": "男子",
+      "grade": 1,
+      "id": "A4D9C38A-BD7E-4201-A7B8-2AF2035331AF",
+      "name": "永井 優郷"
+    },
+    {
+      "gender": "男子",
+      "grade": 1,
+      "id": "63382429-BF38-4DAB-9D37-DF3DCAFC739F",
+      "name": "林 飛雄"
+    },
+    {
+      "gender": "男子",
+      "grade": 1,
+      "id": "21F1B6CF-6C64-49CF-818D-0AE10B152CE5",
+      "name": "篠原 駿太朗"
+    },
+    {
+      "gender": "男子",
+      "grade": 1,
+      "id": "B05357C7-D2E7-4E10-BA1A-2BDCF6357A42",
+      "name": "澁川 侑弥"
+    },
+    {
+      "gender": "男子",
+      "grade": 1,
+      "id": "027D4009-FA71-48D8-BF69-6CB1253B927A",
+      "name": "津高 大輔"
+    },
+    {
+      "gender": "女子",
+      "grade": 1,
+      "id": "73B08CC1-568E-48BD-A01C-320B1F17A1C5",
+      "name": "神原 乙葉"
+    },
+    {
+      "gender": "女子",
+      "grade": 1,
+      "id": "517F2748-3513-4846-ABC9-31A2047FDC98",
+      "name": "山口 萌"
+    },
+    {
+      "gender": "男子",
+      "grade": 1,
+      "id": "384A8876-6A87-4F31-AA01-5DD2B673D985",
+      "name": "槇 康滉"
+    },
+    {
+      "gender": "男子",
+      "grade": 1,
+      "id": "85762CE8-451E-49BF-B321-7D0DA88FC4B0",
+      "name": "林 真輝"
+    },
+    {
+      "gender": "男子",
+      "grade": 1,
+      "id": "DA9B242F-31EB-46AB-8BC7-A981D0032F33",
+      "name": "工藤 和哲"
+    },
+    {
+      "gender": "女子",
+      "grade": 1,
+      "id": "097DE96D-0B9C-40C5-8143-9780BFA27FA3",
+      "name": "中村 椛蓮"
+    },
+    {
+      "gender": "女子",
+      "grade": 1,
+      "id": "C5F007D1-392A-493D-855C-BBA336AF0E7B",
+      "name": "池田 葵"
+    }
+  ],
+  "sessions": [
+    {
+      "archers": [
+        {
+          "gender": "未設定",
+          "grade": 1,
+          "id": "8E972132-A9BB-4F5D-8469-BE5CDDD4F1E9",
+          "isGuest": false,
+          "isSeparator": false,
+          "isTotalCalculator": false,
+          "marks": [
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "name": ""
+        },
+        {
+          "gender": "未設定",
+          "grade": 1,
+          "id": "305CDBE1-539A-44C1-8622-626BE4F8526B",
+          "isGuest": false,
+          "isSeparator": false,
+          "isTotalCalculator": false,
+          "marks": [
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "name": ""
+        },
+        {
+          "gender": "未設定",
+          "grade": 1,
+          "id": "1D59F524-A4E5-40AC-BEF5-A93111DE0439",
+          "isGuest": false,
+          "isSeparator": false,
+          "isTotalCalculator": false,
+          "marks": [
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "name": ""
+        }
+      ],
+      "date": 793923988.17362,
+      "id": "B035D31D-6C3D-4FE2-B532-62BD22661929",
+      "note": "",
+      "shotCount": 12,
+      "syncStatus": "pending"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "archers": [
+    {
+      "gender": "未設定",
+      "grade": 1,
+      "id": "8E972132-A9BB-4F5D-8469-BE5CDDD4F1E9",
+      "isGuest": false,
+      "isSeparator": false,
+      "isTotalCalculator": false,
+      "marks": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "name": ""
+    },
+    {
+      "gender": "未設定",
+      "grade": 1,
+      "id": "305CDBE1-539A-44C1-8622-626BE4F8526B",
+      "isGuest": false,
+      "isSeparator": false,
+      "isTotalCalculator": false,
+      "marks": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "name": ""
+    },
+    {
+      "gender": "未設定",
+      "grade": 1,
+      "id": "1D59F524-A4E5-40AC-BEF5-A93111DE0439",
+      "isGuest": false,
+      "isSeparator": false,
+      "isTotalCalculator": false,
+      "marks": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "name": ""
+    }
+  ],
+  "date": 793923988.17362,
+  "id": "B035D31D-6C3D-4FE2-B532-62BD22661929",
+  "note": "",
+  "shotCount": 12,
+  "syncStatus": "pending"
+}

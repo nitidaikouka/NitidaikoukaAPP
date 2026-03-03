@@ -10,11 +10,15 @@ export enum Mark {
   miss = "×"
 }
 
+export type Theme = 'light' | 'dark';
+
 export interface Member {
   id: string;
   name: string;
   gender: Gender;
   grade: number;
+  color?: string;
+  avatarUrl?: string;
 }
 
 export interface Alumni {
@@ -22,6 +26,8 @@ export interface Alumni {
   name: string;
   gender: Gender;
   graduationYear: string;
+  color?: string;
+  avatarUrl?: string;
 }
 
 export interface Archer {
@@ -29,10 +35,12 @@ export interface Archer {
   name: string;
   gender: Gender;
   grade: number;
-  marks: Mark[];
-  isSeparator: boolean;
-  isTotalCalculator: boolean;
   isGuest: boolean;
+  isSeparator?: boolean;
+  isTotalCalculator?: boolean;
+  marks: Mark[];
+  color?: string;
+  avatarUrl?: string;
 }
 
 export interface RecordEntry {
@@ -57,6 +65,37 @@ export interface SessionRecord {
   shotCount: number;
   note?: string;
   syncStatus?: 'synced' | 'pending' | 'error';
+  isArchived?: boolean;
+  tags?: string[];
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+  author: string;
+  isImportant: boolean;
+}
+
+export type NotificationType = 'info' | 'success' | 'warning' | 'error';
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  timestamp: string;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  action: string;
+  details: string;
+  severity: 'low' | 'medium' | 'high';
 }
 
 export interface SavedData {
@@ -70,4 +109,23 @@ export interface SavedData {
   shotsPerRound: number;
   isFirstLaunch?: boolean;
   lockedBlocks?: Record<string, boolean>;
+  accounts?: UserAccount[];
+  theme?: Theme;
+  hasSeenTutorial?: boolean;
+  announcements?: Announcement[];
+  auditLogs?: AuditLog[];
+  lastUpdated?: number; // Last modification timestamp (ms)
+}
+
+export enum UserRole {
+  admin = "admin",
+  member = "member"
+}
+
+export interface UserAccount {
+  id: string; // login ID
+  passwordHash: string; // in a real app this should be hashed
+  role: UserRole;
+  name?: string;
+  memberId?: string; // If role is member, links to members array
 }

@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { Gender, Mark, Member, Alumni, Archer, PracticeRecord, SessionRecord, SavedData } from './types';
+import {
+  Gender, Mark, Member, Alumni, Archer, PracticeRecord, SessionRecord, SavedData, UserAccount, UserRole, Theme, Announcement,
+  Notification, NotificationType,
+  AuditLog
+} from './types';
 import { db } from './firebase';
-import { ref, set } from 'firebase/database';
+import { ref, set, onValue, get } from 'firebase/database';
 
 export const createArcher = (count: number): Archer => ({
   id: crypto.randomUUID(),
@@ -13,6 +17,14 @@ export const createArcher = (count: number): Archer => ({
   isTotalCalculator: false,
   isGuest: false
 });
+
+export const hashPassword = async (password: string): Promise<string> => {
+  if (!password) return "";
+  const msgUint8 = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
 
 export const createSeparator = (): Archer => ({
   id: crypto.randomUUID(),
@@ -88,7 +100,23 @@ export interface ScoreContextType {
   lockedBlocks: Record<string, boolean>;
   syncStatus: SyncStatus;
   lastSyncTime: Date | null;
-  
+  accounts: UserAccount[];
+  setAccounts: React.Dispatch<React.SetStateAction<UserAccount[]>>;
+  currentUser: UserAccount | null;
+  setCurrentUser: React.Dispatch<React.SetStateAction<UserAccount | null>>;
+  theme: Theme;
+  setTheme: React.Dispatch<React.SetStateAction<Theme>>;
+  toggleTheme: () => void;
+  hasSeenTutorial: boolean;
+  markTutorialAsSeen: () => void;
+  announcements: Announcement[];
+  addAnnouncement: (title: string, content: string, isImportant: boolean) => void;
+  deleteAnnouncement: (id: string) => void;
+  notifications: Notification[];
+  addNotification: (message: string, type?: NotificationType, title?: string) => void;
+  removeNotification: (id: string) => void;
+  auditLogs: AuditLog[];
+
   // Methods
   addArcher: () => void;
   addSeparator: () => void;
@@ -104,15 +132,21 @@ export interface ScoreContextType {
   undo: () => void;
   redo: () => void;
   toggleLock: (calculatorId: string, blockIndex: number) => void;
-  updateArcherInfo: (archerId: string, name: string, gender: Gender, grade: number, isGuest: boolean) => void;
+  updateArcherInfo: (archerId: string, name: string, gender: Gender, grade: number, isGuest: boolean, color?: string, avatarUrl?: string) => void;
   moveArcher: (sourceId: string, targetId: string) => void;
   saveSessionAndReset: (note: string) => void;
-  
+
+  addAccount: (account: UserAccount) => void;
+  deleteAccount: (id: string) => void;
   addMember: (name: string, gender: Gender, grade: number) => void;
-  updateMember: (id: string, name: string, gender: Gender, grade: number) => void;
+  updateMember: (id: string, name: string, gender: Gender, grade: number, color?: string, avatarUrl?: string) => void;
   deleteMember: (id: string) => void;
+  promoteToAlumni: (id: string) => void;
   deleteAlumni: (id: string) => void;
-  
+  bulkPromoteToAlumni: (ids: string[]) => void;
+  bulkDeleteMembers: (ids: string[]) => void;
+  bulkPromoteGrades: (ids: string[]) => void;
+
   deleteSession: (id: string) => void;
   restoreSession: (id: string) => void;
   permanentlyDeleteSession: (id: string) => void;
@@ -126,14 +160,20 @@ export interface ScoreContextType {
   moveHistoryArcher: (sessionId: string, sourceId: string, targetId: string) => void;
   updateSessionNote: (sessionId: string, note: string) => void;
   updateSessionDate: (sessionId: string, date: string) => void;
-  
+  archiveSession: (id: string) => void;
+  unarchiveSession: (id: string) => void;
+  updateSessionTags: (id: string, tags: string[]) => void;
+
   getDisplayName: (name: string) => string;
   getGroupArchers: (calculatorId: string) => Archer[];
   getHistoryGroupArchers: (sessionId: string, calculatorId: string) => Archer[];
   getCalculatorForArcher: (archerId: string) => string | null;
-  
+
   exportDataToString: () => string;
   importDataFromString: (json: string) => boolean;
+
+  login: (id: string, plainPassword: string) => Promise<boolean>;
+  logout: () => void;
 }
 
 export const ScoreContext = createContext<ScoreContextType | null>(null);
@@ -155,13 +195,218 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
   const [lastFiscalYearChecked, setLastFiscalYearChecked] = useState<number>(2000);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [undoStack, setUndoStack] = useState<{archers: Archer[], lockedBlocks: Record<string, boolean>}[]>([]);
-  const [redoStack, setRedoStack] = useState<{archers: Archer[], lockedBlocks: Record<string, boolean>}[]>([]);
+  const [undoStack, setUndoStack] = useState<{ archers: Archer[], lockedBlocks: Record<string, boolean> }[]>([]);
+  const [redoStack, setRedoStack] = useState<{ archers: Archer[], lockedBlocks: Record<string, boolean> }[]>([]);
   const [lockedBlocks, setLockedBlocks] = useState<Record<string, boolean>>({});
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [pendingSync, setPendingSync] = useState<NodeJS.Timeout | null>(null);
+  const [accounts, setAccounts] = useState<UserAccount[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [theme, setTheme] = useState<Theme>('light');
+  const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<number>(0);
   const activeSyncs = useRef(0);
+
+  function getLatestData(): SavedData {
+    return {
+      currentArchers: archers,
+      members,
+      alumni,
+      history,
+      sessions,
+      trash,
+      lastFiscalYearChecked,
+      shotsPerRound,
+      isFirstLaunch: false,
+      lockedBlocks,
+      accounts,
+      theme,
+      announcements,
+      hasSeenTutorial,
+      auditLogs,
+      lastUpdated: lastUpdated || Date.now()
+    };
+  }
+
+  async function syncToCloud(data: SavedData) {
+    if (!navigator.onLine) {
+      setSyncStatus('offline');
+      return;
+    }
+    activeSyncs.current += 1;
+    setSyncStatus('syncing');
+    let success = false;
+
+    const sessionIds = new Set(data.sessions.map(s => s.id));
+    const trashIds = new Set(data.trash?.map(s => s.id) || []);
+
+    const now = Date.now();
+    const dataToSave: SavedData = {
+      ...data,
+      lastUpdated: now,
+      sessions: data.sessions.map(s => {
+        const { syncStatus, ...rest } = s as any;
+        return rest;
+      }),
+      trash: data.trash?.map(s => {
+        const { syncStatus, ...rest } = s as any;
+        return rest;
+      })
+    };
+
+    try {
+      // Re-check remote before final write to prevent race conditions
+      const remoteSnapshot = await get(ref(db, 'appData/lastUpdated'));
+      const remoteUpdateAt = remoteSnapshot.val() || 0;
+      if (remoteUpdateAt > (data.lastUpdated || 0)) {
+        console.warn("Sync blocked: Remote data is newer. Retrying pull.");
+        return; // Let onValue handle the update
+      }
+
+      await set(ref(db, 'appData'), dataToSave);
+      success = true;
+
+      setTimeout(() => {
+        setSessions(prev => prev.map(s => {
+          if (sessionIds.has(s.id)) {
+            return { ...s, syncStatus: 'synced' };
+          }
+          return s;
+        }));
+
+        setTrash(prev => prev.map(s => {
+          if (trashIds.has(s.id)) {
+            return { ...s, syncStatus: 'synced' };
+          }
+          return s;
+        }));
+
+        setLastSyncTime(new Date());
+        addNotification("クラウドとの同期が完了しました", "success", "同期完了");
+      }, 0);
+    } catch (e) {
+      console.error("Firebase sync failed", e);
+      setSyncStatus('error');
+
+      setTimeout(() => {
+        setSessions(prev => prev.map(s => {
+          if (sessionIds.has(s.id) && s.syncStatus === 'pending') {
+            return { ...s, syncStatus: 'error' };
+          }
+          return s;
+        }));
+
+        setTrash(prev => prev.map(s => {
+          if (trashIds.has(s.id) && s.syncStatus === 'pending') {
+            return { ...s, syncStatus: 'error' };
+          }
+          return s;
+        }));
+      }, 0);
+    } finally {
+      activeSyncs.current -= 1;
+      if (activeSyncs.current === 0 && success) {
+        setSyncStatus('synced');
+      }
+    }
+  }
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    setLastUpdated(Date.now());
+  };
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setSyncStatus('pending');
+      const dataStr = localStorage.getItem('nihon_u_kyudo_app');
+      if (dataStr) {
+        try {
+          syncToCloud(JSON.parse(dataStr));
+        } catch (e) { }
+      }
+    };
+    const handleOffline = () => setSyncStatus('offline');
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    if (!navigator.onLine) setSyncStatus('offline');
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [isLoaded]);
+
+  // Remote Sync Listener (Conflict Resolution)
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const unsubscribe = onValue(ref(db, 'appData'), (snapshot) => {
+      const remoteData: SavedData = snapshot.val();
+      if (!remoteData) return;
+
+      const remoteLastUpdated = remoteData.lastUpdated || 0;
+      if (remoteLastUpdated <= lastUpdated) {
+        // Our local state is already ahead of or equal to remote. No need to merge.
+        return;
+      }
+
+      setLastUpdated(remoteLastUpdated);
+
+      // Merge Logic: Prioritize local 'pending' items
+      setSessions(prevLocal => {
+        const pendingLocal = prevLocal.filter(s => s.syncStatus === 'pending');
+        const pendingIds = new Set(pendingLocal.map(s => s.id));
+
+        // Merge remote sessions that aren't pending locally
+        const merged = [
+          ...pendingLocal,
+          ...(remoteData.sessions || []).filter(s => !pendingIds.has(s.id))
+        ];
+
+        // Sort by date or id to keep consistent
+        return merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      });
+
+      setTrash(prevLocal => {
+        const pendingLocal = prevLocal.filter(s => s.syncStatus === 'pending');
+        const pendingIds = new Set(pendingLocal.map(s => s.id));
+        return [
+          ...pendingLocal,
+          ...(remoteData.trash || []).filter((s: any) => !pendingIds.has(s.id))
+        ];
+      });
+
+      // Merge members: Use remote as base, but keep local IDs consistency
+      setMembers(prev => {
+        const remoteMembers = remoteData.members || [];
+        if (remoteMembers.length === 0) return prev;
+        return remoteMembers;
+      });
+
+      setAlumni(remoteData.alumni || []);
+      if (remoteData.accounts && remoteData.accounts.length > 0) {
+        setAccounts(remoteData.accounts);
+      }
+      setHistory(remoteData.history || []);
+      setShotsPerRound(remoteData.shotsPerRound || 12);
+      setLockedBlocks(remoteData.lockedBlocks || {});
+      if (remoteData.theme) setTheme(remoteData.theme);
+      if (remoteData.announcements) setAnnouncements(remoteData.announcements);
+      if (remoteData.auditLogs) setAuditLogs(remoteData.auditLogs);
+      if (remoteData.hasSeenTutorial !== undefined) setHasSeenTutorial(remoteData.hasSeenTutorial);
+
+      setLastSyncTime(new Date());
+      setSyncStatus('synced');
+    });
+
+    return () => unsubscribe();
+  }, [isLoaded, isAdminMode]); // Refetch if mode changes just in case
 
   const getFiscalYear = (date: Date | string) => {
     const d = new Date(date);
@@ -184,6 +429,18 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
         setShotsPerRound(data.shotsPerRound || 12);
         setLastFiscalYearChecked(data.lastFiscalYearChecked || 2000);
         setLockedBlocks(data.lockedBlocks || {});
+        if (data.theme) setTheme(data.theme);
+        if (data.lastUpdated) setLastUpdated(data.lastUpdated);
+
+        // Setup initial accounts if not exists
+        let loadedAccounts = data.accounts || [];
+        if (loadedAccounts.length === 0) {
+          // Default admin: admin / 1234
+          loadedAccounts = [
+            { id: "admin", passwordHash: "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4", role: UserRole.admin, name: "管理者" }
+          ];
+        }
+        setAccounts(loadedAccounts);
       } catch (e) {
         console.error("Failed to parse saved data", e);
       }
@@ -192,9 +449,40 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
       setMembers(initialMembers);
       setArchers([createArcher(12), createArcher(12), createArcher(12)]);
       setLastFiscalYearChecked(getFiscalYear(new Date()));
+      // Default admin: admin / 1234
+      setAccounts([{ id: "admin", passwordHash: "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4", role: UserRole.admin, name: "管理者" }]);
     }
     setIsLoaded(true);
   }, []);
+
+
+  // Password Migration: Migrate plain-text passwords to SHA-256 hashes
+  useEffect(() => {
+    if (isLoaded) {
+      const migratePasswords = async () => {
+        let changed = false;
+        const migrated = await Promise.all(accounts.map(async (acc) => {
+          let updated = { ...acc };
+          // SHA-256 hex is 64 chars. If significantly shorter, treat as plain text.
+          if (acc.passwordHash && acc.passwordHash.length < 32) {
+            updated.passwordHash = await hashPassword(acc.passwordHash);
+            changed = true;
+          }
+          // Migration: Ensure admin has a name if missing
+          if (acc.id === "admin" && !acc.name) {
+            updated.name = "管理者";
+            changed = true;
+          }
+          return updated;
+        }));
+
+        if (changed) {
+          setAccounts(migrated);
+        }
+      };
+      migratePasswords();
+    }
+  }, [isLoaded, accounts]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -208,10 +496,22 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
       lastFiscalYearChecked,
       shotsPerRound,
       isFirstLaunch: false,
-      lockedBlocks
+      lockedBlocks,
+      accounts,
+      theme,
+      announcements,
+      hasSeenTutorial,
+      auditLogs,
+      lastUpdated
     };
     localStorage.setItem('nihon_u_kyudo_app', JSON.stringify(data));
-  }, [archers, members, alumni, history, sessions, trash, lastFiscalYearChecked, shotsPerRound, lockedBlocks, isLoaded]);
+  }, [archers, members, alumni, history, sessions, trash, lastFiscalYearChecked, shotsPerRound, lockedBlocks, accounts, theme, isLoaded, announcements, hasSeenTutorial, auditLogs, lastUpdated]);
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -252,97 +552,87 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
     }));
   }, [shotsPerRound, isLoaded]);
 
-  const syncToCloud = async (data: SavedData) => {
-    activeSyncs.current += 1;
-    setSyncStatus('syncing');
-    let success = false;
-    
-    const sessionIds = new Set(data.sessions.map(s => s.id));
-    const trashIds = new Set(data.trash?.map(s => s.id) || []);
-
-    const dataToSave = {
-      ...data,
-      sessions: data.sessions.map(s => {
-        const { syncStatus, ...rest } = s;
-        return rest;
-      }),
-      trash: data.trash?.map(s => {
-        const { syncStatus, ...rest } = s;
-        return rest;
-      })
+  const addNotification = (message: string, type: NotificationType = 'info', title?: string) => {
+    const defaultTitles: Record<NotificationType, string> = {
+      info: 'お知らせ',
+      success: '完了',
+      warning: '注意',
+      error: 'エラー'
     };
-
-    try {
-      await set(ref(db, 'appData'), dataToSave);
-      success = true;
-      
-      setTimeout(() => {
-        setSessions(prev => prev.map(s => {
-          if (sessionIds.has(s.id)) {
-            return { ...s, syncStatus: 'synced' };
-          }
-          return s;
-        }));
-        
-        setTrash(prev => prev.map(s => {
-          if (trashIds.has(s.id)) {
-            return { ...s, syncStatus: 'synced' };
-          }
-          return s;
-        }));
-        
-        setLastSyncTime(new Date());
-      }, 0);
-    } catch (e) {
-      console.error("Firebase sync failed", e);
-      setSyncStatus('error');
-      
-      setTimeout(() => {
-        setSessions(prev => prev.map(s => {
-          if (sessionIds.has(s.id) && s.syncStatus === 'pending') {
-            return { ...s, syncStatus: 'error' };
-          }
-          return s;
-        }));
-        
-        setTrash(prev => prev.map(s => {
-          if (trashIds.has(s.id) && s.syncStatus === 'pending') {
-            return { ...s, syncStatus: 'error' };
-          }
-          return s;
-        }));
-      }, 0);
-    } finally {
-      activeSyncs.current -= 1;
-      if (activeSyncs.current === 0 && success) {
-        setSyncStatus('synced');
-      }
-    }
+    const newNotif: Notification = {
+      id: crypto.randomUUID(),
+      title: title || defaultTitles[type],
+      message,
+      type,
+      timestamp: new Date().toISOString()
+    };
+    setNotifications(prev => [newNotif, ...prev.slice(0, 4)]); // Keep last 5
+    setTimeout(() => removeNotification(newNotif.id), 5000); // Auto remove after 5s
   };
 
-  const addArcher = () => setArchers(prev => [...prev, createArcher(shotsPerRound)]);
-  const addSeparator = () => setArchers(prev => [...prev, createSeparator()]);
-  const addTotalCalculator = () => setArchers(prev => [...prev, createTotalCalculator(shotsPerRound)]);
-  
-  const insertArcher = (index: number) => setArchers(prev => {
-    const newArchers = [...prev];
-    newArchers.splice(index, 0, createArcher(shotsPerRound));
-    return newArchers;
-  });
-  
-  const insertSeparator = (index: number) => setArchers(prev => {
-    const newArchers = [...prev];
-    newArchers.splice(index, 0, createSeparator());
-    return newArchers;
-  });
-  
-  const insertTotalCalculator = (index: number) => setArchers(prev => {
-    const newArchers = [...prev];
-    newArchers.splice(index, 0, createTotalCalculator(shotsPerRound));
-    return newArchers;
-  });
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
-  const deleteArcher = (id: string) => setArchers(prev => prev.filter(a => a.id !== id));
+  const addAuditLog = (action: string, details: string, severity: 'low' | 'medium' | 'high' = 'low', overrideUser?: { id: string, name: string }) => {
+    const newLog: AuditLog = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      userId: overrideUser?.id || currentUser?.id || 'guest',
+      userName: overrideUser?.name || currentUser?.name || 'ゲスト',
+      action,
+      details,
+      severity
+    };
+    setAuditLogs(prev => [newLog, ...prev.slice(0, 99)]); // Keep last 100
+    setLastUpdated(Date.now());
+  };
+
+
+  const addArcher = () => {
+    setArchers(prev => [...prev, createArcher(shotsPerRound)]);
+    setLastUpdated(Date.now());
+  };
+  const addSeparator = () => {
+    setArchers(prev => [...prev, createSeparator()]);
+    setLastUpdated(Date.now());
+  };
+  const addTotalCalculator = () => {
+    setArchers(prev => [...prev, createTotalCalculator(shotsPerRound)]);
+    setLastUpdated(Date.now());
+  };
+
+  const insertArcher = (index: number) => {
+    setArchers(prev => {
+      const newArchers = [...prev];
+      newArchers.splice(index, 0, createArcher(shotsPerRound));
+      return newArchers;
+    });
+    setLastUpdated(Date.now());
+  };
+
+  const insertSeparator = (index: number) => {
+    setArchers(prev => {
+      const newArchers = [...prev];
+      newArchers.splice(index, 0, createSeparator());
+      return newArchers;
+    });
+    setLastUpdated(Date.now());
+  };
+
+  const insertTotalCalculator = (index: number) => {
+    setArchers(prev => {
+      const newArchers = [...prev];
+      newArchers.splice(index, 0, createTotalCalculator(shotsPerRound));
+      return newArchers;
+    });
+    setLastUpdated(Date.now());
+  };
+
+  const deleteArcher = (id: string) => {
+    setArchers(prev => prev.filter(a => a.id !== id));
+    setLastUpdated(Date.now());
+  };
 
   const pushUndo = () => {
     setUndoStack(prev => {
@@ -360,6 +650,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
     setRedoStack(prev => [...prev, { archers, lockedBlocks }]);
     setArchers(previousState.archers);
     setLockedBlocks(previousState.lockedBlocks);
+    setLastUpdated(Date.now());
   };
 
   const redo = () => {
@@ -369,6 +660,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
     setUndoStack(prev => [...prev, { archers, lockedBlocks }]);
     setArchers(nextState.archers);
     setLockedBlocks(nextState.lockedBlocks);
+    setLastUpdated(Date.now());
   };
 
   const toggleLock = (calculatorId: string, blockIndex: number) => {
@@ -377,6 +669,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
       ...prev,
       [`${calculatorId}-${blockIndex}`]: !prev[`${calculatorId}-${blockIndex}`]
     }));
+    setLastUpdated(Date.now());
   };
 
   const toggleMark = (archerId: string, markIndex: number) => {
@@ -404,21 +697,21 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
-  const updateArcherInfo = (archerId: string, name: string, gender: Gender, grade: number, isGuest: boolean) => {
-    setArchers(prev => prev.map(a => a.id === archerId ? { ...a, name, gender, grade, isGuest } : a));
+  const updateArcherInfo = (archerId: string, name: string, gender: Gender, grade: number, isGuest: boolean, color?: string, avatarUrl?: string) => {
+    setArchers(prev => prev.map(a => a.id === archerId ? { ...a, name, gender, grade, isGuest, color, avatarUrl } : a));
   };
 
   const moveArcher = (sourceId: string, targetId: string) => {
     const sourceIndex = archers.findIndex(a => a.id === sourceId);
     const targetIndex = archers.findIndex(a => a.id === targetId);
     if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return;
-    
+
     pushUndo();
     setArchers(prev => {
       const sIdx = prev.findIndex(a => a.id === sourceId);
       const tIdx = prev.findIndex(a => a.id === targetId);
       if (sIdx === -1 || tIdx === -1 || sIdx === tIdx) return prev;
-      
+
       const newArchers = [...prev];
       const [moved] = newArchers.splice(sIdx, 1);
       newArchers.splice(tIdx, 0, moved);
@@ -426,7 +719,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const saveSessionAndReset = (note: string) => {
+  const saveSessionAndReset = (note: string, tags: string[] = []) => {
     const entries = archers.filter(a => !a.isSeparator && !a.isTotalCalculator && a.name && a.marks.some(m => m !== Mark.none)).map(a => ({
       name: a.name,
       gender: a.gender,
@@ -435,56 +728,61 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
       hits: a.marks.filter(m => m === Mark.hit).length,
       isGuest: a.isGuest
     }));
-    
+
     let newHistory = history;
     if (entries.length > 0) {
       newHistory = [...history, { id: crypto.randomUUID(), date: new Date().toISOString(), entries }];
       setHistory(newHistory);
     }
-    
+
     let newSessions = sessions;
     if (archers.length > 0) {
-      newSessions = [{ 
-        id: crypto.randomUUID(), 
-        date: new Date().toISOString(), 
-        archers, 
-        shotCount: shotsPerRound, 
+      newSessions = [{
+        id: crypto.randomUUID(),
+        date: new Date().toISOString(),
+        archers,
+        shotCount: shotsPerRound,
         note,
+        tags,
         syncStatus: 'pending'
       }, ...sessions];
       setSessions(newSessions);
     }
-    
+
     const newArchers = [createArcher(shotsPerRound), createArcher(shotsPerRound), createArcher(shotsPerRound)];
     setArchers(newArchers);
 
     // Sync to cloud
+    const now = Date.now();
+    setLastUpdated(now);
     const data: SavedData = {
+      ...getLatestData(),
       currentArchers: newArchers,
-      members,
-      alumni,
       history: newHistory,
       sessions: newSessions,
-      trash,
-      lastFiscalYearChecked,
-      shotsPerRound,
-      isFirstLaunch: false,
-      lockedBlocks
+      lastUpdated: now
     };
     syncToCloud(data);
+    addAuditLog("練習記録保存", `ノート: ${note || "なし"}`, "low");
+    addNotification("練習記録を保存しました", "success", "記録完了");
   };
 
   const addMember = (name: string, gender: Gender, grade: number) => {
-    if (name) setMembers(prev => [...prev, { id: crypto.randomUUID(), name, gender, grade }]);
+    if (name) {
+      const newMember = { id: crypto.randomUUID(), name, gender, grade };
+      setMembers(prev => [...prev, newMember]);
+      setLastUpdated(Date.now());
+      addAuditLog("部員追加", `${name} を追加しました`, "medium");
+    }
   };
 
-  const updateMember = (id: string, name: string, gender: Gender, grade: number) => {
+  const updateMember = (id: string, name: string, gender: Gender, grade: number, color?: string, avatarUrl?: string) => {
     const oldMember = members.find(m => m.id === id);
     if (!oldMember) return;
     const oldName = oldMember.name;
-    
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, name, gender, grade } : m));
-    
+
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, name, gender, grade, color, avatarUrl } : m));
+
     if (oldName !== name) {
       setHistory(prev => prev.map(h => ({
         ...h,
@@ -495,10 +793,189 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
         archers: s.archers.map(a => a.name === oldName ? { ...a, name } : a)
       })));
     }
+    setLastUpdated(Date.now());
   };
 
-  const deleteMember = (id: string) => setMembers(prev => prev.filter(m => m.id !== id));
-  const deleteAlumni = (id: string) => setAlumni(prev => prev.filter(a => a.id !== id));
+  const deleteMember = (id: string) => {
+    const target = members.find(m => m.id === id);
+    const newMembers = members.filter(m => m.id !== id);
+    setMembers(newMembers);
+    const now = Date.now();
+    setLastUpdated(now);
+    syncToCloud({ ...getLatestData(), members: newMembers, lastUpdated: now });
+    addAuditLog("部員削除", `${target?.name || id} を削除しました`, "high");
+  };
+
+  const deleteAlumni = (id: string) => {
+    const newAlumni = alumni.filter(a => a.id !== id);
+    setAlumni(newAlumni);
+    syncToCloud({ ...getLatestData(), alumni: newAlumni });
+  };
+
+  const promoteToAlumni = (id: string) => {
+    const member = members.find(m => m.id === id);
+    if (!member) return;
+
+    const fiscalYear = getFiscalYear(new Date());
+    const newAlumniItem: Alumni = {
+      id: member.id,
+      name: member.name,
+      gender: member.gender,
+      graduationYear: `${fiscalYear} 年度`
+    };
+
+    const newMembers = members.filter(m => m.id !== id);
+    const newAlumni = [newAlumniItem, ...alumni];
+
+    setMembers(newMembers);
+    setAlumni(newAlumni);
+    syncToCloud({ ...getLatestData(), members: newMembers, alumni: newAlumni });
+  };
+
+  const bulkPromoteToAlumni = (ids: string[]) => {
+    const fiscalYear = getFiscalYear(new Date());
+    const targets = members.filter(m => ids.includes(m.id));
+    if (targets.length === 0) return;
+
+    const newAlumniItems: Alumni[] = targets.map(m => ({
+      id: m.id,
+      name: m.name,
+      gender: m.gender,
+      graduationYear: `${fiscalYear} 年度`
+    }));
+
+    const newMembers = members.filter(m => !ids.includes(m.id));
+    const newAlumni = [...newAlumniItems, ...alumni];
+
+    setMembers(newMembers);
+    setAlumni(newAlumni);
+    syncToCloud({ ...getLatestData(), members: newMembers, alumni: newAlumni });
+  };
+
+  const bulkDeleteMembers = (ids: string[]) => {
+    const newMembers = members.filter(m => !ids.includes(m.id));
+    setMembers(newMembers);
+    syncToCloud({ ...getLatestData(), members: newMembers });
+  };
+
+  const bulkPromoteGrades = (ids: string[]) => {
+    const fiscalYear = getFiscalYear(new Date());
+    const newAlumniItems: Alumni[] = [];
+    const updatedMembers: Member[] = [];
+
+    members.forEach(m => {
+      if (ids.includes(m.id)) {
+        if (m.grade >= 4) {
+          newAlumniItems.push({
+            id: m.id,
+            name: m.name,
+            gender: m.gender,
+            graduationYear: `${fiscalYear} 年度`
+          });
+        } else {
+          updatedMembers.push({ ...m, grade: m.grade + 1 });
+        }
+      } else {
+        updatedMembers.push(m);
+      }
+    });
+
+    const newAlumni = [...newAlumniItems, ...alumni];
+    setMembers(updatedMembers);
+    setAlumni(newAlumni);
+    syncToCloud({ ...getLatestData(), members: updatedMembers, alumni: newAlumni });
+  };
+
+
+  const markTutorialAsSeen = () => {
+    setHasSeenTutorial(true);
+    setLastUpdated(Date.now());
+    syncToCloud({ ...getLatestData(), hasSeenTutorial: true });
+  };
+
+  const addAnnouncement = (title: string, content: string, isImportant: boolean) => {
+    const newAnnouncement: Announcement = {
+      id: crypto.randomUUID(),
+      title,
+      content,
+      date: new Date().toISOString(),
+      author: currentUser?.id || 'admin',
+      isImportant
+    };
+    const newAnnouncements = [newAnnouncement, ...announcements];
+    setAnnouncements(newAnnouncements);
+    setLastUpdated(Date.now());
+    addAuditLog("お知らせ追加", `タイトル: ${title}`, "medium");
+    syncToCloud({ ...getLatestData(), announcements: newAnnouncements });
+  };
+
+  const deleteAnnouncement = (id: string) => {
+    const newAnnouncements = announcements.filter(a => a.id !== id);
+    setAnnouncements(newAnnouncements);
+    setLastUpdated(Date.now());
+    addAuditLog("お知らせ削除", `ID: ${id}`, "medium");
+    syncToCloud({ ...getLatestData(), announcements: newAnnouncements });
+  };
+
+  const archiveSession = (id: string) => {
+    const newSessions = sessions.map(s => s.id === id ? { ...s, isArchived: true, syncStatus: 'pending' as SyncStatus } : s);
+    setSessions(newSessions);
+    const data: SavedData = {
+      currentArchers: archers,
+      members,
+      alumni,
+      history,
+      sessions: newSessions,
+      trash,
+      lastFiscalYearChecked,
+      shotsPerRound,
+      isFirstLaunch: false,
+      lockedBlocks,
+      accounts,
+      theme
+    };
+    syncToCloud(data);
+  };
+
+  const unarchiveSession = (id: string) => {
+    const newSessions = sessions.map(s => s.id === id ? { ...s, isArchived: false, syncStatus: 'pending' as SyncStatus } : s);
+    setSessions(newSessions);
+    const data: SavedData = {
+      currentArchers: archers,
+      members,
+      alumni,
+      history,
+      sessions: newSessions,
+      trash,
+      lastFiscalYearChecked,
+      shotsPerRound,
+      isFirstLaunch: false,
+      lockedBlocks,
+      accounts,
+      theme
+    };
+    syncToCloud(data);
+  };
+
+  const updateSessionTags = (id: string, tags: string[]) => {
+    const newSessions = sessions.map(s => s.id === id ? { ...s, tags, syncStatus: 'pending' as SyncStatus } : s);
+    setSessions(newSessions);
+    const data: SavedData = {
+      currentArchers: archers,
+      members,
+      alumni,
+      history,
+      sessions: newSessions,
+      trash,
+      lastFiscalYearChecked,
+      shotsPerRound,
+      isFirstLaunch: false,
+      lockedBlocks,
+      accounts,
+      theme
+    };
+    syncToCloud(data);
+  };
 
   const deleteSession = (id: string) => {
     const sessionToDelete = sessions.find(s => s.id === id);
@@ -506,10 +983,10 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
 
     const newSessions = sessions.filter(s => s.id !== id);
     const newTrash = [sessionToDelete, ...trash];
-    
+
     setSessions(newSessions);
     setTrash(newTrash);
-    
+
     const data: SavedData = {
       currentArchers: archers,
       members,
@@ -528,13 +1005,13 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
   const restoreSession = (id: string) => {
     const sessionToRestore = trash.find(s => s.id === id);
     if (!sessionToRestore) return;
-    
+
     const newTrash = trash.filter(s => s.id !== id);
     const newSessions = [...sessions, { ...sessionToRestore, syncStatus: 'pending' }];
-    
+
     setTrash(newTrash);
     setSessions(newSessions);
-    
+
     const data: SavedData = {
       currentArchers: archers,
       members,
@@ -553,7 +1030,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
   const permanentlyDeleteSession = (id: string) => {
     const newTrash = trash.filter(s => s.id !== id);
     setTrash(newTrash);
-    
+
     const data: SavedData = {
       currentArchers: archers,
       members,
@@ -747,7 +1224,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
         const sourceIndex = s.archers.findIndex(a => a.id === sourceId);
         const targetIndex = s.archers.findIndex(a => a.id === targetId);
         if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return s;
-        
+
         const newArchers = [...s.archers];
         const [moved] = newArchers.splice(sourceIndex, 1);
         newArchers.splice(targetIndex, 0, moved);
@@ -820,7 +1297,7 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
       const s = m.name.includes(" ") ? m.name.split(" ")[0] : (m.name.includes("　") ? m.name.split("　")[0] : m.name);
       return s === surname;
     }).length;
-    
+
     if (sameSurnameCount > 1 && firstName) {
       return `${surname}（${firstName.charAt(0)}）`;
     }
@@ -890,24 +1367,73 @@ export const ScoreProvider = ({ children }: { children: ReactNode }) => {
       setHistory(data.history || []);
       setSessions(data.sessions || []);
       setTrash(data.trash || []);
-      setLastFiscalYearChecked(data.lastFiscalYearChecked || 2000);
+      setTheme(data.theme || 'light');
+      setHasSeenTutorial(data.hasSeenTutorial || false);
+      setAnnouncements(data.announcements || []);
+      setLastFiscalYearChecked(data.lastFiscalYearChecked || 2024);
       setShotsPerRound(data.shotsPerRound || 12);
+      addNotification("最新データを読み込みました", "info", "復旧");
       return true;
     } catch {
       return false;
     }
   };
 
+  const login = async (id: string, plainPassword: string) => {
+    const hashedInput = await hashPassword(plainPassword);
+    const account = accounts.find(a => a.id === id && a.passwordHash === hashedInput);
+    if (account) {
+      setCurrentUser(account);
+      setIsAdminMode(account.role === UserRole.admin);
+      addAuditLog("ログイン", `${account.name || account.id} がログインしました`, "low", { id: account.id, name: account.name || account.id });
+      return true;
+    }
+    addAuditLog("ログイン失敗", `${id} のログインに失敗しました`, "medium", { id: id, name: "不明" });
+    return false;
+  };
+
+  const logout = () => {
+    if (currentUser) {
+      addAuditLog("ログアウト", `${currentUser.name || currentUser.id} がログアウトしました`, "low", { id: currentUser.id, name: currentUser.name || currentUser.id });
+    }
+    setCurrentUser(null);
+    setIsAdminMode(false);
+  };
+
+  const addAccount = (account: UserAccount) => {
+    const newAccounts = [...accounts, account];
+    setAccounts(newAccounts);
+    addAuditLog("アカウント作成", `ID: ${account.id} (${account.role}) を作成しました`, "medium");
+  };
+
+  const deleteAccount = (id: string) => {
+    const newAccounts = accounts.filter(a => a.id !== id);
+    setAccounts(newAccounts);
+    addAuditLog("アカウント削除", `ID: ${id} を削除しました`, "high");
+  };
+
   return (
     <ScoreContext.Provider value={{
       archers, setArchers, members, setMembers, alumni, setAlumni, history, setHistory,
       sessions, setSessions, trash, setTrash, shotsPerRound, setShotsPerRound, isAdminMode, setIsAdminMode, lockedBlocks,
-      syncStatus, lastSyncTime,
+      syncStatus, lastSyncTime, accounts, setAccounts, currentUser, setCurrentUser,
       addArcher, addSeparator, addTotalCalculator, insertArcher, insertSeparator, insertTotalCalculator, deleteArcher, toggleMark, setMark, canUndo: undoStack.length > 0, canRedo: redoStack.length > 0, undo, redo, toggleLock, updateArcherInfo, moveArcher,
-      saveSessionAndReset, addMember, updateMember, deleteMember, deleteAlumni, deleteSession, restoreSession, permanentlyDeleteSession,
+      saveSessionAndReset, addMember, updateMember, deleteMember, deleteAlumni, promoteToAlumni, bulkPromoteToAlumni, bulkDeleteMembers, bulkPromoteGrades, deleteSession, restoreSession, permanentlyDeleteSession,
+      addAccount, deleteAccount,
       updateSessionShotCount, deleteArcherFromSession, addArcherToSession, addSeparatorToSession,
-      addTotalToSession, toggleHistoryMark, updateHistoryArcherInfo, moveHistoryArcher, updateSessionNote, updateSessionDate,
-      getDisplayName, getGroupArchers, getHistoryGroupArchers, getCalculatorForArcher, exportDataToString, importDataFromString
+      addTotalToSession, toggleHistoryMark, updateHistoryArcherInfo, moveHistoryArcher, updateSessionNote,
+      updateSessionDate,
+      archiveSession,
+      unarchiveSession,
+      updateSessionTags,
+      hasSeenTutorial, markTutorialAsSeen,
+      announcements, addAnnouncement, deleteAnnouncement,
+      notifications, addNotification, removeNotification,
+      auditLogs,
+
+      getDisplayName,
+      getGroupArchers, getHistoryGroupArchers, getCalculatorForArcher, exportDataToString, importDataFromString,
+      login, logout
     }}>
       {children}
     </ScoreContext.Provider>
